@@ -11,6 +11,7 @@ This is a tool package.
 * image2pdf
 * pdf2image
 * play_images
+* concat_image
 * startup
 * excel2latex
 * excel2markdown
