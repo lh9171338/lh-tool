@@ -39,7 +39,7 @@ def excel2latex(excel_file, text_file, sheet_index=0):
                 bold = get_cell_font_bold(workbook, cell)
                 if type == 2:
                     precision = precisions[j]
-                    value = f'%ds.{precision}f' % value
+                    value = f'%.{precision}f' % value
                 if bold:
                     f.write('\\textbf{' + str(value) + '}')
                 else:
