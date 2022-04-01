@@ -4,13 +4,14 @@ import glob
 import tqdm
 import argparse
 import time
+import lh_tool.imageio as iio
 
 
-def play_images(image_file_list, fps):
+def play_image(image_file_list, fps):
     period = 1.0 / fps
     for image_file in tqdm.tqdm(image_file_list):
         start_time = time.time()
-        image = cv2.imread(image_file)
+        image = iio.imread(image_file)
         cv2.namedWindow('image', 0)
         cv2.imshow('image', image)
         current_time = time.time()
@@ -29,7 +30,7 @@ def main():
 
     fps = opts.fps
     image_file_list = sorted(glob.glob(os.path.join(opts.input, f'*.{opts.postfix}')))
-    play_images(image_file_list, fps)
+    play_image(image_file_list, fps)
 
 
 if __name__ == '__main__':

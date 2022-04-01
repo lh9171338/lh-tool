@@ -2,12 +2,14 @@ import os
 import shutil
 import argparse
 import glob
-from image2pdf import image2pdf
-from pdf2image import pdf2image
+from lh_tool.image2pdf import image2pdf
+from lh_tool.pdf2image import pdf2image
 
 
 def compress_pdf(input_file, output_file, temp_path, zoom):
-    assert not os.path.exists(temp_path), f'temp_path must not exist'
+    temp_path = os.path.splitext(input_file)[0] if temp_path is None else temp_path
+    assert not os.path.exists(temp_path), f'\'{temp_path}\' exists'
+
     pdf2image(input_file, None, temp_path, zoom)
     image_file_list = sorted(glob.glob(os.path.join(temp_path, '*.png')))
     image2pdf(image_file_list, output_file)
@@ -21,15 +23,16 @@ def main():
     parser.add_argument('-t', '--temp_path', type=str, help='temporary path for image files')
     parser.add_argument('-z', '--zoom', type=float, default=1, help='zoom scale')
     opts = parser.parse_args()
-
-    opts.temp_path = os.path.splitext(opts.input)[0] if opts.temp_path is None else opts.temp_path
     print(opts)
 
-    input_file = opts.input
-    output_file = opts.output
-    temp_path = opts.temp_path
-    zoom = opts.zoom
-    compress_pdf(input_file, output_file, temp_path, zoom)
+    try:
+        input_file = opts.input
+        output_file = opts.output
+        temp_path = opts.temp_path
+        zoom = opts.zoom
+        compress_pdf(input_file, output_file, temp_path, zoom)
+    except AssertionError as e:
+        print(e)
 
 
 if __name__ == '__main__':

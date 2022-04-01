@@ -23,17 +23,23 @@ def pdf2image(pdf_file, image_file, image_path, zoom=1):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input', type=str, help='input pdf file', required=True)
-    parser.add_argument('-o', '--output', type=str, help='output image file')
+    parser.add_argument('-o', '--output', type=str, help='output image file or output path')
     parser.add_argument('-z', '--zoom', type=float, default=1, help='zoom image')
     opts = parser.parse_args()
-
-    opts.output = os.path.splitext(opts.input)[0] + '.png' if opts.output is None else opts.output
     print(opts)
 
     pdf_file = opts.input
-    image_file = opts.output
-    image_path = os.path.splitext(image_file)[0]
     zoom = opts.zoom
+    if opts.output is None:
+        image_file = os.path.splitext(pdf_file)[0] + '.png'
+    else:
+        postfix = os.path.splitext(opts.output)[1]
+        if len(postfix):
+            image_file = opts.output
+        else:
+            image_file = opts.output + '.png'
+    image_path = os.path.splitext(image_file)[0]
+
     pdf2image(pdf_file, image_file, image_path, zoom)
 
 

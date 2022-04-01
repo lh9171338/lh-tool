@@ -4,17 +4,19 @@ This is a tool package.
 
 # Tools
 
-* image2video
-* video2image
+* imageio
 * image2image
+* image2video
 * image2gif
 * image2pdf
+* video2image
 * pdf2image
-* play_images
+* play_image
 * concat_image
-* startup
 * excel2latex
 * excel2markdown
+* compress_pdf
+* startup
 
 # Install
 
@@ -26,7 +28,7 @@ cd lh-tool
 
 py -m build
 
-pip install dist/lh_tool-1.0.0-py3-none-any.whl
+pip install dist/lh_tool-1.2.0-py3-none-any.whl
 ```
 
 * Install from the Python Package Index (PyPI)

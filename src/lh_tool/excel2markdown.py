@@ -1,5 +1,4 @@
 import os
-
 import xlrd
 import argparse
 
@@ -13,6 +12,8 @@ def get_cell_font_bold(workbook, cell):
 
 
 def excel2markdown(excel_file, markdown_file, sheet_index=0, style=''):
+    markdown_file = os.path.splitext(excel_file)[0] + '.md' if markdown_file is None else markdown_file
+
     workbook = xlrd.open_workbook(excel_file, formatting_info=True)
     sheet = workbook.sheet_by_index(sheet_index)
 
@@ -70,8 +71,6 @@ def main():
     parser.add_argument('-o', '--output', type=str, help='output markdown file')
     parser.add_argument('-s', '--sheet_index', type=int, default=0, help='sheet index')
     opts = parser.parse_args()
-
-    opts.output = os.path.splitext(opts.input)[0] + '.md' if opts.output is None else opts.output
     print(opts)
 
     excel_file = opts.input

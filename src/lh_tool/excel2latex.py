@@ -1,5 +1,4 @@
 import os
-
 import xlrd
 import argparse
 
@@ -13,11 +12,12 @@ def get_cell_font_bold(workbook, cell):
 
 
 def excel2latex(excel_file, text_file, sheet_index=0):
+    text_file = os.path.splitext(excel_file)[0] + '.txt' if text_file is None else text_file
+
     workbook = xlrd.open_workbook(excel_file, formatting_info=True)
     sheet = workbook.sheet_by_index(sheet_index)
 
     with open(text_file, 'w') as f:
-
         precisions = []
         for j in range(sheet.ncols):
             max_precision = 0
@@ -56,8 +56,6 @@ def main():
     parser.add_argument('-o', '--output', type=str, help='output text file')
     parser.add_argument('-s', '--sheet_index', type=int, default=0, help='sheet index')
     opts = parser.parse_args()
-
-    opts.output = os.path.splitext(opts.input)[0] + '.txt' if opts.output is None else opts.output
     print(opts)
 
     excel_file = opts.input
