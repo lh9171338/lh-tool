@@ -7,8 +7,8 @@ from lh_tool.Iterator import SingleProcess, MultiProcess
 import lh_tool.imageio as iio
 
 
-def images2video(image_path, video_file, postfix, fourcc, fps, frameSize=None):
-    image_file_list = glob.glob(os.path.join(image_path, f'*.{postfix}'))
+def images2video(image_path, video_file, postfix, fourcc, fps, frameSize=None, speed=1):
+    image_file_list = sorted(glob.glob(os.path.join(image_path, f'*.{postfix}')))
     if len(image_file_list) == 0:
         return
     video_file = os.path.abspath(image_path) + '.mp4' if video_file is None else video_file
@@ -20,6 +20,7 @@ def images2video(image_path, video_file, postfix, fourcc, fps, frameSize=None):
     videoWriter = cv2.VideoWriter(video_file, fourcc, fps, frameSize)
     assert videoWriter.isOpened(), f'Failed to create file: {video_file}'
 
+    image_file_list = [image_file_list[i] for i in range(0, len(image_file_list), speed)]
     for image_file in tqdm.tqdm(image_file_list, desc=video_file):
         image = iio.imread(image_file)
         if frameSize != (image.shape[1], image.shape[0]):
@@ -35,6 +36,7 @@ def main():
     parser.add_argument('-p', '--postfix', type=str, default='png', help='postfix of image filename')
     parser.add_argument('-f', '--fps', type=float, default=29.97, help='desired fps for video')
     parser.add_argument('-s', '--size', type=int, nargs=2, help='desired frame size for video')
+    parser.add_argument('-a', '--speed', type=int, default=1, help='speed for video')
     parser.add_argument('-r', '--recursive', action='store_true', help='convert video to images recursively')
     parser.add_argument('-n', '--nprocs', type=int, default=1, help='number of process')
     opts = parser.parse_args()
@@ -46,6 +48,7 @@ def main():
         postfix = opts.postfix
         fps = opts.fps
         size = opts.size
+        speed = opts.speed
         recursive = opts.recursive
         nprocs = opts.nprocs
         fourcc = cv2.VideoWriter.fourcc('m', 'p', '4', 'v')
@@ -55,9 +58,9 @@ def main():
                 iterator = SingleProcess(images2video)
             else:
                 iterator = MultiProcess(images2video, nprocs=nprocs)
-            iterator.run(image_path_list, None, postfix, fourcc, fps, size)
+            iterator.run(image_path_list, None, postfix, fourcc, fps, size, speed)
         else:
-            images2video(image_path, video_file, postfix, fourcc, fps, size)
+            images2video(image_path, video_file, postfix, fourcc, fps, size, speed)
 
     except AssertionError as e:
         print(e)

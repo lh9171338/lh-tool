@@ -5,12 +5,13 @@ import argparse
 from lh_tool.Iterator import SingleProcess, MultiProcess
 
 
-def image2gif(image_path, gif_file, postfix, duration):
-    image_file_list = glob.glob(os.path.join(image_path, f'*.{postfix}'))
+def image2gif(image_path, gif_file, postfix, duration, speed=1):
+    image_file_list = sorted(glob.glob(os.path.join(image_path, f'*.{postfix}')))
     if len(image_file_list) == 0:
         return
     gif_file = os.path.abspath(image_path) + '.gif' if gif_file is None else gif_file
 
+    image_file_list = [image_file_list[i] for i in range(0, len(image_file_list), speed)]
     images = [imageio.imread(image_file) for image_file in image_file_list]
     duration /= len(image_file_list) - 1
     imageio.mimsave(gif_file, images, 'GIF', duration=duration)
@@ -22,6 +23,7 @@ def main():
     parser.add_argument('-o', '--output', type=str, help='output gif file')
     parser.add_argument('-p', '--postfix', type=str, default='png', help='postfix of image filename')
     parser.add_argument('-d', '--duration', type=float, default=1, help='duration')
+    parser.add_argument('-a', '--speed', type=int, default=1, help='speed for video')
     parser.add_argument('-r', '--recursive', action='store_true', help='convert images to gif recursively')
     parser.add_argument('-n', '--nprocs', type=int, default=1, help='number of process')
     opts = parser.parse_args()
@@ -32,6 +34,7 @@ def main():
         gif_file = opts.output
         postfix = opts.postfix
         duration = opts.duration
+        speed = opts.speed
         recursive = opts.recursive
         nprocs = opts.nprocs
         if recursive:
@@ -40,9 +43,9 @@ def main():
                 iterator = SingleProcess(image2gif)
             else:
                 iterator = MultiProcess(image2gif, nprocs=nprocs)
-            iterator.run(image_path_list, None, postfix, duration)
+            iterator.run(image_path_list, None, postfix, duration, speed)
         else:
-            image2gif(image_path, gif_file, postfix, duration)
+            image2gif(image_path, gif_file, postfix, duration, speed)
 
     except AssertionError as e:
         print(e)
