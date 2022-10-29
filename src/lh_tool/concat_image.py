@@ -74,7 +74,7 @@ def main():
             if nprocs == 1:
                 iterator = SingleProcess(concat_image)
             else:
-                iterator = MultiProcess(concat_image, nprocs)
+                iterator = MultiProcess(concat_image, nprocs=nprocs)
             iterator.run(list(zip(image_file_list, another_image_file_list)), output_file_list, padding_size, hstack, black)
 
         else:

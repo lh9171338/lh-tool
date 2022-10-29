@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-import imageio
+
 
 def imread(filename, flags=cv2.IMREAD_COLOR):
     """

@@ -49,7 +49,7 @@ def main():
             if nprocs == 1:
                 iterator = SingleProcess(image2image)
             else:
-                iterator = MultiProcess(image2image, nprocs)
+                iterator = MultiProcess(image2image, nprocs=nprocs)
             iterator.run(image_path_list, None, input_postfix, output_postfix, image_size)
         else:
             image2image(input_image_path, output_image_path, input_postfix, output_postfix, image_size)
