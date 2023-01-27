@@ -80,7 +80,7 @@ def main():
         else:
             if os.path.isdir(opts.input):
                 image_file_list = sorted(glob.glob(os.path.join(opts.input, f'*.{postfix}')))
-                output_file = os.path.abspath(opts.input) + '.png' if opts.output is None else opts.output
+                output_file = os.path.abspath(opts.input) + f'.{postfix}' if opts.output is None else opts.output
                 concat_image(image_file_list, output_file, padding_size, hstack, black)
             else:
                 image_file = opts.input

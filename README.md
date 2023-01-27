@@ -17,6 +17,7 @@ This is a tool package.
 * excel2markdown
 * compress_pdf
 * startup
+* rename
 
 # Install
 
@@ -28,7 +29,7 @@ cd lh-tool
 
 py -m build
 
-pip install dist/lh_tool-1.3.1-py3-none-any.whl
+pip install dist/lh_tool-1.4.0-py3-none-any.whl
 ```
 
 * Install from the Python Package Index (PyPI)

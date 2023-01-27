@@ -1,26 +1,20 @@
 import os
-import cv2
 import glob
 import argparse
 from lh_tool.Iterator import SingleProcess, MultiProcess
-import lh_tool.imageio as iio
 
 
-def image2image(input_file, output_file, image_size=None):
-    image = iio.imread(input_file)
-    if image_size is not None:
-        image = cv2.resize(image, tuple(image_size))
-    iio.imwrite(output_file, image)
+def rename(input_file, output_file):
+    os.rename(input_file, output_file)
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--input', type=str, default='.', help='path of input image files')
-    parser.add_argument('-o', '--output', type=str, help='path of output image files. The default is the same as the '
-                                                         'path of input image files')
-    parser.add_argument('-p', '--input_postfix', type=str, default='png', help='original postfix of image filename')
-    parser.add_argument('-d', '--output_postfix', type=str, default='jpg', help='desired postfix of image filename')
-    parser.add_argument('-s', '--size', type=int, nargs=2, help='desired image size')
+    parser.add_argument('-i', '--input', type=str, default='.', help='path of input files')
+    parser.add_argument('-o', '--output', type=str, help='path of output files. The default is the same as the '
+                                                         'path of input files')
+    parser.add_argument('-p', '--input_postfix', type=str, required=True, help='original postfix of image filename')
+    parser.add_argument('-d', '--output_postfix', type=str, required=True, help='desired postfix of image filename')
     parser.add_argument('-r', '--recursive', action='store_true', help='convert video to images recursively')
     parser.add_argument('-n', '--nprocs', type=int, default=1, help='number of process')
     opts = parser.parse_args()
@@ -31,7 +25,6 @@ def main():
         output_path = opts.output
         input_postfix = opts.input_postfix
         output_postfix = opts.output_postfix
-        image_size = opts.size
         recursive = opts.recursive
         nprocs = opts.nprocs
         if recursive:
@@ -49,10 +42,10 @@ def main():
             output_file_list.append(output_file)
 
         if nprocs == 1:
-            iterator = SingleProcess(image2image)
+            iterator = SingleProcess(rename)
         else:
-            iterator = MultiProcess(image2image, nprocs=nprocs)
-        iterator.run(input_file_list, output_file_list, image_size)
+            iterator = MultiProcess(rename, nprocs=nprocs)
+        iterator.run(input_file_list, output_file_list)
 
     except AssertionError as e:
         print(e)
