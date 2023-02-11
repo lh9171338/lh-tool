@@ -27,7 +27,7 @@ class Iterator:
             self.args.append(arg)
 
     def run(self, *args):
-        assert 0, 'Not implemented'
+        raise NotImplementedError
 
 
 class SingleProcess(Iterator):
@@ -35,14 +35,14 @@ class SingleProcess(Iterator):
         super().__init__(process, total)
 
     def run(self, *args):
-        # 解析参数
+        # parse args
         self.parse_arg(*args)
 
-        # 运行
-        retval = []
+        # run
+        ret_list = []
         for args in tqdm.tqdm(zip(*self.args), total=self.total, desc=self.process.__name__):
-            retval.append(self.process(*args))
-        return retval
+            ret_list.append(self.process(*args))
+        return ret_list
 
 
 class MultiProcess(Iterator):
@@ -51,14 +51,14 @@ class MultiProcess(Iterator):
 
         self.nprocs = nprocs if nprocs > 0 else multiprocessing.cpu_count()
 
-    def _process(self, args):
+    def __call__(self, args):
         return self.process(*args)
 
     def run(self, *args):
-        # 解析参数
+        # parse args
         self.parse_arg(*args)
 
-        # 运行
+        # run
         with multiprocessing.Pool(self.nprocs) as p:
-            retval = list(tqdm.tqdm(p.imap(self._process, zip(*self.args)), total=self.total, desc=self.process.__name__))
-        return retval
+            ret_list = list(tqdm.tqdm(p.imap(self, zip(*self.args)), total=self.total, desc=self.process.__name__))
+        return ret_list
