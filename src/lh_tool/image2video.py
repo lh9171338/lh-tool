@@ -4,7 +4,7 @@ import glob
 import tqdm
 import argparse
 from lh_tool.Iterator import SingleProcess, MultiProcess
-import lh_tool.imageio as iio
+import imageio.v2 as iio
 
 
 def images2video(image_path, video_file, postfix, fourcc, fps, frameSize=None, speed=1):
@@ -16,7 +16,6 @@ def images2video(image_path, video_file, postfix, fourcc, fps, frameSize=None, s
     if frameSize is None:
         image = iio.imread(image_file_list[0])
         frameSize = (image.shape[1], image.shape[0])
-    frameSize = tuple(frameSize)
     videoWriter = cv2.VideoWriter(video_file, fourcc, fps, frameSize)
     assert videoWriter.isOpened(), f'Failed to create file: {video_file}'
 
@@ -47,7 +46,7 @@ def main():
         video_file = opts.output
         postfix = opts.postfix
         fps = opts.fps
-        size = opts.size
+        size = None if opts.size is None else tuple(opts.size)
         speed = opts.speed
         recursive = opts.recursive
         nprocs = opts.nprocs
@@ -58,7 +57,8 @@ def main():
                 iterator = SingleProcess(images2video)
             else:
                 iterator = MultiProcess(images2video, nprocs=nprocs)
-            iterator.run(image_path_list, None, postfix, fourcc, fps, size, speed)
+            iterator.run(image_path_list, video_file=None, postfix=postfix,
+                         fourcc=fourcc, fps=fps, frameSize=size, speed=speed)
         else:
             images2video(image_path, video_file, postfix, fourcc, fps, size, speed)
 

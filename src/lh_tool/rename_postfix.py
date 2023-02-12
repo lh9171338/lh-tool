@@ -15,7 +15,7 @@ def main():
                                                          'path of input files')
     parser.add_argument('-p', '--input_postfix', type=str, required=True, help='original postfix of image filename')
     parser.add_argument('-d', '--output_postfix', type=str, required=True, help='desired postfix of image filename')
-    parser.add_argument('-r', '--recursive', action='store_true', help='convert video to images recursively')
+    parser.add_argument('-r', '--recursive', action='store_true', help='rename recursively')
     parser.add_argument('-n', '--nprocs', type=int, default=1, help='number of process')
     opts = parser.parse_args()
     print(opts)

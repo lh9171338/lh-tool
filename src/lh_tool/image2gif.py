@@ -1,6 +1,6 @@
 import os
 import glob
-import imageio
+import imageio.v2 as iio
 import argparse
 from lh_tool.Iterator import SingleProcess, MultiProcess
 
@@ -12,9 +12,9 @@ def image2gif(image_path, gif_file, postfix, duration, speed=1):
     gif_file = os.path.abspath(image_path) + '.gif' if gif_file is None else gif_file
 
     image_file_list = [image_file_list[i] for i in range(0, len(image_file_list), speed)]
-    images = [imageio.imread(image_file) for image_file in image_file_list]
+    images = [iio.imread(image_file) for image_file in image_file_list]
     duration /= len(image_file_list) - 1
-    imageio.mimsave(gif_file, images, 'GIF', duration=duration)
+    iio.mimsave(gif_file, images, duration=duration)
 
 
 def main():
@@ -43,7 +43,7 @@ def main():
                 iterator = SingleProcess(image2gif)
             else:
                 iterator = MultiProcess(image2gif, nprocs=nprocs)
-            iterator.run(image_path_list, None, postfix, duration, speed)
+            iterator.run(image_path_list, gif_file=None, postfix=postfix, duration=duration, speed=speed)
         else:
             image2gif(image_path, gif_file, postfix, duration, speed)
 

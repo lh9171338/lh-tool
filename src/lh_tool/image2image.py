@@ -3,7 +3,7 @@ import cv2
 import glob
 import argparse
 from lh_tool.Iterator import SingleProcess, MultiProcess
-import lh_tool.imageio as iio
+import imageio.v2 as iio
 
 
 def image2image(input_file, output_file, image_size=None):
@@ -31,7 +31,7 @@ def main():
         output_path = opts.output
         input_postfix = opts.input_postfix
         output_postfix = opts.output_postfix
-        image_size = opts.size
+        image_size = None if opts.size is None else tuple(opts.size)
         recursive = opts.recursive
         nprocs = opts.nprocs
         if recursive:
@@ -52,7 +52,7 @@ def main():
             iterator = SingleProcess(image2image)
         else:
             iterator = MultiProcess(image2image, nprocs=nprocs)
-        iterator.run(input_file_list, output_file_list, image_size)
+        iterator.run(input_file_list, output_file_list, image_size=image_size)
 
     except AssertionError as e:
         print(e)

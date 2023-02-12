@@ -4,7 +4,7 @@ import glob
 import tqdm
 import argparse
 from lh_tool.Iterator import SingleProcess, MultiProcess
-import lh_tool.imageio as iio
+import imageio.v2 as iio
 
 
 def video2images(video_file, image_path, postfix, frameSize=None):
@@ -43,7 +43,7 @@ def main():
         video_file = opts.input
         image_path = opts.output
         postfix = opts.postfix
-        size = opts.size
+        size = None if opts.size is None else tuple(opts.size)
         recursive = opts.recursive
         nprocs = opts.nprocs
         if recursive:
@@ -52,7 +52,7 @@ def main():
                 iterator = SingleProcess(video2images)
             else:
                 iterator = MultiProcess(video2images, nprocs=nprocs)
-            iterator.run(video_file_list, None, postfix, size)
+            iterator.run(video_file_list, image_path=None, postfix=postfix, frameSize=size)
         else:
             video2images(video_file, image_path, postfix, size)
 

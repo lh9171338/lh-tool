@@ -4,7 +4,6 @@ This is a tool package.
 
 # Tools
 
-* imageio
 * image2image
 * image2video
 * image2gif
@@ -17,7 +16,7 @@ This is a tool package.
 * excel2markdown
 * compress_pdf
 * startup
-* rename
+* rename_postfix
 
 # Install
 
@@ -29,7 +28,7 @@ cd lh-tool
 
 py -m build
 
-pip install dist/lh_tool-1.4.1-py3-none-any.whl
+pip install dist/lh_tool-1.5.0-py3-none-any.whl
 ```
 
 * Install from the Python Package Index (PyPI)

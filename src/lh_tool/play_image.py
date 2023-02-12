@@ -4,7 +4,7 @@ import glob
 import tqdm
 import argparse
 import time
-import lh_tool.imageio as iio
+import imageio.v2 as iio
 
 
 def play_image(image_file_list, fps):

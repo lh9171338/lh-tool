@@ -4,7 +4,7 @@ import glob
 import numpy as np
 import argparse
 from lh_tool.Iterator import SingleProcess, MultiProcess
-import lh_tool.imageio as iio
+import imageio.v2 as iio
 
 
 def concat_image(image_file_list, output_file, padding_size=5, hstack=True, black=True):
@@ -75,7 +75,13 @@ def main():
                 iterator = SingleProcess(concat_image)
             else:
                 iterator = MultiProcess(concat_image, nprocs=nprocs)
-            iterator.run(list(zip(image_file_list, another_image_file_list)), output_file_list, padding_size, hstack, black)
+            iterator.run(
+                list(zip(image_file_list, another_image_file_list)),
+                output_file_list,
+                padding_size=padding_size,
+                hstack=hstack,
+                black=black
+            )
 
         else:
             if os.path.isdir(opts.input):
