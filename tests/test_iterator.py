@@ -1,7 +1,16 @@
-from src.lh_tool.Iterator import SingleProcess, MultiProcess
+import asyncio
+from src.lh_tool.Iterator import SingleProcess, MultiProcess, AsyncProcess
 
 
 def process(a, b, opt='+'):
+    if opt == '+':
+        return a + b
+    else:
+        return a - b
+
+
+async def async_process(a, b, opt='+'):
+    await asyncio.sleep(1)
     if opt == '+':
         return a + b
     else:
@@ -16,6 +25,9 @@ def test_iterator():
     print(result_list)
 
     result_list = MultiProcess(process, nprocs=1).run(a=a, b=b, opt='+')
+    print(result_list)
+
+    result_list = AsyncProcess(async_process).run(a=a, b=b, opt='+')
     print(result_list)
 
 

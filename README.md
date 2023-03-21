@@ -28,7 +28,7 @@ cd lh-tool
 
 py -m build
 
-pip install dist/lh_tool-1.5.0-py3-none-any.whl
+pip install dist/lh_tool-1.6.0-py3-none-any.whl
 ```
 
 * Install from the Python Package Index (PyPI)
