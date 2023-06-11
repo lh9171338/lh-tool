@@ -1,5 +1,5 @@
 import asyncio
-from src.lh_tool.Iterator import SingleProcess, MultiProcess, AsyncProcess
+from src.lh_tool.Iterator import SingleProcess, MultiProcess, AsyncProcess, AsyncMultiProcess, ParallelProcess
 
 
 def process(a, b, opt='+'):
@@ -7,6 +7,17 @@ def process(a, b, opt='+'):
         return a + b
     else:
         return a - b
+
+
+def process_batch(a_list, b_list, opt='+'):
+    res_list = []
+    for a, b in zip(a_list, b_list):
+        if opt == '+':
+            res = a + b
+        else:
+            res = a - b
+        res_list.append(res)
+    return res_list
 
 
 async def async_process(a, b, opt='+'):
@@ -24,10 +35,19 @@ def test_iterator():
     result_list = SingleProcess(process).run(a, b, opt='+')
     print(result_list)
 
-    result_list = MultiProcess(process, nprocs=1).run(a=a, b=b, opt='+')
+    result_list = MultiProcess(process, nprocs=10).run(a=a, b=b, opt='+')
     print(result_list)
 
     result_list = AsyncProcess(async_process).run(a=a, b=b, opt='+')
+    print(result_list)
+
+    result_list = AsyncMultiProcess(async_process, nprocs=10).run(a=a, b=b, opt='+')
+    print(result_list)
+
+    ret_list = ParallelProcess(process_batch, nprocs=5).run(a_list=a, b_list=b, opt='+')
+    result_list = []
+    for ret in ret_list:
+        result_list.extend(ret)
     print(result_list)
 
 

@@ -2,6 +2,10 @@
 
 This is a tool package. 
 
+# Updates
+
+ - [x] 2023.06.11: Add ParallelProcess and AsyncMultiProcess iterator
+
 # Tools
 
 * image2image
@@ -28,7 +32,7 @@ cd lh-tool
 
 py -m build
 
-pip install dist/lh_tool-1.6.0-py3-none-any.whl
+pip install dist/lh_tool-1.7.0-py3-none-any.whl
 ```
 
 * Install from the Python Package Index (PyPI)
