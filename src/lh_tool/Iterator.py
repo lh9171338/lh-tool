@@ -318,12 +318,10 @@ class ParallelProcess(Iterator):
             procs.append(p)
             p.start()
 
-        ret_list, indices = [], []
+        ret_list = [[] for _ in range(self.nprocs)]
         for _ in tqdm.trange(self.nprocs, desc=self.func.__name__):
             idx, res = results_queue.get()
-            indices.append(idx)
-            ret_list.append(res)
-        ret_list = [ret_list[idx] for idx in indices]
+            ret_list[idx] = res
 
         for p in procs:
             p.join()

@@ -4,6 +4,7 @@ This is a tool package.
 
 # Updates
 
+ - [x] 2023.06.12: Fix the bug that the ParallelProcess iterator returns results in the wrong order
  - [x] 2023.06.11: Add ParallelProcess and AsyncMultiProcess iterator
 
 # Tools
