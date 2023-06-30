@@ -15,6 +15,7 @@ def images2video(image_path, video_file, postfix, fourcc, fps, frameSize=None, s
 
     if frameSize is None:
         image = iio.imread(image_file_list[0])
+        image = image[:, :, ::-1]   # RGB2BGR
         frameSize = (image.shape[1], image.shape[0])
     videoWriter = cv2.VideoWriter(video_file, fourcc, fps, frameSize)
     assert videoWriter.isOpened(), f'Failed to create file: {video_file}'

@@ -12,6 +12,7 @@ def play_image(image_file_list, fps):
     for image_file in tqdm.tqdm(image_file_list):
         start_time = time.time()
         image = iio.imread(image_file)
+        image = image[:, :, ::-1]
         cv2.namedWindow('image', 0)
         cv2.imshow('image', image)
         current_time = time.time()

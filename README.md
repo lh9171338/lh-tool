@@ -4,6 +4,7 @@ This is a tool package.
 
 # Updates
 
+ - [x] 2023.06.30: Add image channel conversion between imageio and cv2
  - [x] 2023.06.12: Fix the bug that the ParallelProcess iterator returns results in the wrong order
  - [x] 2023.06.11: Add ParallelProcess and AsyncMultiProcess iterator
 
@@ -33,7 +34,7 @@ cd lh-tool
 
 py -m build
 
-pip install dist/lh_tool-1.7.0-py3-none-any.whl
+pip install dist/lh_tool-1.7.1-py3-none-any.whl
 ```
 
 * Install from the Python Package Index (PyPI)

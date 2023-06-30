@@ -238,7 +238,9 @@ class ParallelProcess(Iterator):
 
     """
 
-    def __init__(self, process, total=None, nprocs=multiprocessing.cpu_count(), **kwargs):
+    def __init__(
+        self, process, total=None, nprocs=multiprocessing.cpu_count(), **kwargs
+    ):
         super().__init__(process, total)
 
         self.nprocs = nprocs if nprocs > 0 else multiprocessing.cpu_count()
@@ -260,24 +262,25 @@ class ParallelProcess(Iterator):
                     self.total = len(value)
                     break
 
-        assert self.total is not None, 'Can not infer the number of expected iterations'
+        assert self.total is not None, "Can not infer the number of expected iterations"
 
         # split tasks
-        indices = np.linspace(0, self.total, self.nprocs + 1).astype('int32')
+        indices = np.linspace(0, self.total, self.nprocs + 1).astype("int32")
 
         # parse args
         self.dynamic_args = [[] for _ in range(self.nprocs)]
         self.static_args = []
         for arg in args:
             if isinstance(arg, list):
-                assert len(arg) == self.total or len(
-                    arg) == self.nprocs, f'{len(arg)} != {self.total} or {len(arg)} != {self.nprocs}'
+                assert (
+                    len(arg) == self.total or len(arg) == self.nprocs
+                ), f"{len(arg)} != {self.total} or {len(arg)} != {self.nprocs}"
                 if len(arg) == self.nprocs:
                     for i in range(self.nprocs):
                         self.dynamic_args[i].append(arg[i])
                 else:
                     for i in range(self.nprocs):
-                        self.dynamic_args[i].append(arg[indices[i]:indices[i + 1]])
+                        self.dynamic_args[i].append(arg[indices[i] : indices[i + 1]])
             else:
                 self.static_args.append(arg)
 
@@ -286,23 +289,26 @@ class ParallelProcess(Iterator):
         self.static_kwargs = {}
         for key, value in kwargs.items():
             if isinstance(value, list):
-                assert len(value) == self.total or len(
-                    value) == self.nprocs, f'{len(value)} != {self.total} or {len(value)} != {self.nprocs}'
+                assert (
+                    len(value) == self.total or len(value) == self.nprocs
+                ), f"{len(value)} != {self.total} or {len(value)} != {self.nprocs}"
                 if len(value) == self.nprocs:
                     for i in range(self.nprocs):
                         self.dynamic_kwargs[i][key] = value[i]
                 else:
                     for i in range(self.nprocs):
-                        self.dynamic_kwargs[i][key] = value[indices[i]:indices[i + 1]]
+                        self.dynamic_kwargs[i][key] = value[indices[i] : indices[i + 1]]
             else:
                 self.static_kwargs[key] = value
 
         # fix the static args
-        self.partial_func = functools.partial(self.func, *self.static_args, **self.static_kwargs)
+        self.partial_func = functools.partial(
+            self.func, *self.static_args, **self.static_kwargs
+        )
 
-    def __call__(self, dynamic_args, dynamic_kwargs, results_queue, idx):
+    def __call__(self, dynamic_args, dynamic_kwargs, results_dict, idx):
         res = self.partial_func(*dynamic_args, **dynamic_kwargs)
-        results_queue.put((idx, res))
+        results_dict[idx] = res
 
     def run(self, *args, **kwargs):
         """run - Please ensure that static arguments precede dynamic arguments"""
@@ -312,18 +318,19 @@ class ParallelProcess(Iterator):
 
         # run
         procs = []
-        results_queue = multiprocessing.Queue(self.nprocs)
+        manager = multiprocessing.Manager()
+        results_dict = manager.dict()
         for i in range(self.nprocs):
-            p = multiprocessing.Process(target=self, args=(self.dynamic_args[i], self.dynamic_kwargs[i], results_queue, i))
+            p = multiprocessing.Process(
+                target=self,
+                args=(self.dynamic_args[i], self.dynamic_kwargs[i], results_dict, i),
+            )
             procs.append(p)
             p.start()
 
-        ret_list = [[] for _ in range(self.nprocs)]
-        for _ in tqdm.trange(self.nprocs, desc=self.func.__name__):
-            idx, res = results_queue.get()
-            ret_list[idx] = res
-
         for p in procs:
             p.join()
+
+        ret_list = [results_dict[idx] for idx in range(self.nprocs)]
 
         return ret_list

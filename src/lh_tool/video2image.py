@@ -22,6 +22,7 @@ def video2images(video_file, image_path, postfix, frameSize=None):
             break
         if frameSize is not None:
             image = cv2.resize(image, tuple(frameSize))
+        image = image[:, :, ::-1]   # BGR2RGB
         image_file = os.path.join(image_path, f'{index + 1:06d}.{postfix}')
         iio.imwrite(image_file, image)
 
