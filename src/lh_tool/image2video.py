@@ -4,7 +4,6 @@ import glob
 import tqdm
 import argparse
 from lh_tool.Iterator import SingleProcess, MultiProcess
-import imageio.v2 as iio
 
 
 def images2video(image_path, video_file, postfix, fourcc, fps, frameSize=None, speed=1):
@@ -14,7 +13,7 @@ def images2video(image_path, video_file, postfix, fourcc, fps, frameSize=None, s
     video_file = os.path.abspath(image_path) + '.mp4' if video_file is None else video_file
 
     if frameSize is None:
-        image = iio.imread(image_file_list[0])
+        image = cv2.imread(image_file_list[0])
         image = image[:, :, ::-1]   # RGB2BGR
         frameSize = (image.shape[1], image.shape[0])
     videoWriter = cv2.VideoWriter(video_file, fourcc, fps, frameSize)
@@ -22,7 +21,7 @@ def images2video(image_path, video_file, postfix, fourcc, fps, frameSize=None, s
 
     image_file_list = [image_file_list[i] for i in range(0, len(image_file_list), speed)]
     for image_file in tqdm.tqdm(image_file_list, desc=video_file):
-        image = iio.imread(image_file)
+        image = cv2.imread(image_file)
         if frameSize != (image.shape[1], image.shape[0]):
             image = cv2.resize(image, tuple(frameSize))
         videoWriter.write(image)

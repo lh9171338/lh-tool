@@ -4,15 +4,13 @@ import glob
 import tqdm
 import argparse
 import time
-import imageio.v2 as iio
 
 
 def play_image(image_file_list, fps):
     period = 1.0 / fps
     for image_file in tqdm.tqdm(image_file_list):
         start_time = time.time()
-        image = iio.imread(image_file)
-        image = image[:, :, ::-1]
+        image = cv2.imread(image_file)
         cv2.namedWindow('image', 0)
         cv2.imshow('image', image)
         current_time = time.time()
