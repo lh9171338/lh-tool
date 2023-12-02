@@ -12,12 +12,16 @@ def get_cell_font_bold(workbook, cell):
 
 
 def excel2latex(excel_file, text_file, sheet_index=0):
-    text_file = os.path.splitext(excel_file)[0] + '.txt' if text_file is None else text_file
+    text_file = (
+        os.path.splitext(excel_file)[0] + ".txt"
+        if text_file is None
+        else text_file
+    )
 
     workbook = xlrd.open_workbook(excel_file, formatting_info=True)
     sheet = workbook.sheet_by_index(sheet_index)
 
-    with open(text_file, 'w') as f:
+    with open(text_file, "w") as f:
         precisions = []
         for j in range(sheet.ncols):
             max_precision = 0
@@ -27,7 +31,7 @@ def excel2latex(excel_file, text_file, sheet_index=0):
                     if value == round(value):
                         precision = 0
                     else:
-                        precision = len(str(value).split('.')[-1])
+                        precision = len(str(value).split(".")[-1])
                     max_precision = max(max_precision, precision)
             precisions.append(max_precision)
 
@@ -39,22 +43,26 @@ def excel2latex(excel_file, text_file, sheet_index=0):
                 bold = get_cell_font_bold(workbook, cell)
                 if type == 2:
                     precision = precisions[j]
-                    value = f'%.{precision}f' % value
+                    value = f"%.{precision}f" % value
                 if bold:
-                    f.write('\\textbf{' + str(value) + '}')
+                    f.write("\\textbf{" + str(value) + "}")
                 else:
                     f.write(str(value))
                 if j == sheet.ncols - 1:
-                    f.write(' \\\\\n')
+                    f.write(" \\\\\n")
                 else:
-                    f.write(' & ')
+                    f.write(" & ")
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--input', type=str, help='input excel file', required=True)
-    parser.add_argument('-o', '--output', type=str, help='output text file')
-    parser.add_argument('-s', '--sheet_index', type=int, default=0, help='sheet index')
+    parser.add_argument(
+        "-i", "--input", type=str, help="input excel file", required=True
+    )
+    parser.add_argument("-o", "--output", type=str, help="output text file")
+    parser.add_argument(
+        "-s", "--sheet_index", type=int, default=0, help="sheet index"
+    )
     opts = parser.parse_args()
     print(opts)
 
@@ -64,5 +72,5 @@ def main():
     excel2latex(excel_file, text_file, sheet_index)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
