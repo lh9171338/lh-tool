@@ -7,7 +7,7 @@ jobs:
     steps:
     - uses: actions/checkout@master
     - name: Set up Python 3.7
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@main
       with:
         python-version: 3.7
 
@@ -19,6 +19,6 @@ jobs:
         python -m build --sdist --wheel --outdir dist/ .
         
     - name: Publish distribution 📦 to PyPI
-      uses: pypa/gh-action-pypi-publish@master
+      uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.PYPI_API_TOKEN }}
