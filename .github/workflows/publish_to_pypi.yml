@@ -11,6 +11,9 @@ jobs:
       with:
         python-version: 3.7
 
+    - name: Install build
+      run: |
+        python -m pip install build
     - name: Build distribution 📦
       run: |
         python -m build
