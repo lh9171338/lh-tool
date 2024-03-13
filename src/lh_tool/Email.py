@@ -10,6 +10,17 @@ from email.utils import formataddr
 
 
 class Email:
+    """
+    Email
+
+    Parameters:
+        cfg (dict): config
+
+    Example:
+        .. code-block:: python
+        Email(cfg).send()
+    """
+
     def __init__(self, cfg):
         self.from_name = cfg.from_name
         self.from_addr = cfg.from_addr
@@ -65,6 +76,22 @@ class Email:
 
 
 class CustomEmail(Email):
+    """
+    CustomEmail
+
+    Parameters:
+        from_name (str): from name
+        from_addr (str): from address
+        password (str): password
+        to_name (str): to name
+        to_addr (str): to address
+        subject (str): subject
+        content (str): content
+    Example:
+        .. code-block:: python
+        CustomEmail(from_name, from_addr, password, to_name, to_addr, subject, content).send()
+    """
+
     def __init__(
         self,
         from_name,

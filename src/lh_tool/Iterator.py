@@ -21,6 +21,9 @@ class Iterator:
     """
     Iterator
 
+    Parameters:
+        func (callable): function to be iterated
+        total (int, optional): number of iterations
     """
 
     def __init__(self, func, total=None, **kwargs):
@@ -91,10 +94,24 @@ class SingleProcess(Iterator):
     """
     SingleProcess
 
+    Parameters:
+        func (callable): function to be iterated
+        total (int, optional): number of iterations
+
+    Example:
+        .. code-block:: python
+        def add(a, b):
+            return a + b
+
+        a = [1, 2]
+        b = [3, 4]
+        res = SingleProcess(add).run(a, b)
+        print(res)
+        # [4, 6]
     """
 
-    def __init__(self, process, total=None, **kwargs):
-        super().__init__(process, total)
+    def __init__(self, func, total=None, **kwargs):
+        super().__init__(func, total)
 
     def run(self, *args, **kwargs):
         """run - Please ensure that static arguments precede dynamic arguments"""
@@ -117,12 +134,27 @@ class MultiProcess(Iterator):
     """
     MultiProcess
 
+    Parameters:
+        func (callable): function to be iterated
+        total (int, optional): number of iterations
+        nprocs (int, optional): number of processes, default is `multiprocessing.cpu_count()`
+
+    Example:
+        .. code-block:: python
+        def add(a, b):
+            return a + b
+
+        a = [1, 2]
+        b = [3, 4]
+        res = MultiProcess(add).run(a, b)
+        print(res)
+        # [4, 6]
     """
 
     def __init__(
-        self, process, total=None, nprocs=multiprocessing.cpu_count(), **kwargs
+        self, func, total=None, nprocs=multiprocessing.cpu_count(), **kwargs
     ):
-        super().__init__(process, total)
+        super().__init__(func, total)
 
         self.nprocs = nprocs if nprocs > 0 else multiprocessing.cpu_count()
 
@@ -151,10 +183,26 @@ class AsyncProcess(Iterator):
     """
     AsyncProcess
 
+    Parameters:
+        func (callable): function to be iterated
+        total (int, optional): number of iterations
+        concurrency (int, optional): concurrent, default is 0
+
+    Example:
+        .. code-block:: python
+        async def add(a, b):
+            await asyncio.sleep(1)
+            return a + b
+
+        a = [1, 2]
+        b = [3, 4]
+        res = AsyncProcess(add).run(a, b)
+        print(res)
+        # [4, 6]
     """
 
-    def __init__(self, process, total=None, concurrency=0, **kwargs):
-        super().__init__(process, total)
+    def __init__(self, func, total=None, concurrency=0, **kwargs):
+        super().__init__(func, total)
 
         self.concurrency = concurrency
 
@@ -195,17 +243,34 @@ class AsyncMultiProcess(Iterator):
     """
     AsyncMultiProcess
 
+    Parameters:
+        func (callable): function to be iterated
+        total (int, optional): number of iterations
+        concurrency (int, optional): concurrent, default is 16
+        nprocs (int, optional): number of processes, default is `multiprocessing.cpu_count()`
+
+    Example:
+        .. code-block:: python
+        async def add(a, b):
+            await asyncio.sleep(1)
+            return a + b
+
+        a = [1, 2]
+        b = [3, 4]
+        res = AsyncMultiProcess(add).run(a, b)
+        print(res)
+        # [4, 6]
     """
 
     def __init__(
         self,
-        process,
+        func,
         total=None,
         concurrency=16,
         nprocs=multiprocessing.cpu_count(),
         **kwargs,
     ):
-        super().__init__(process, total)
+        super().__init__(func, total)
 
         self.concurrency = concurrency
         self.nprocs = nprocs
@@ -243,10 +308,25 @@ class MultiThread(Iterator):
     """
     MultiThread
 
+    Parameters:
+        func (callable): function to be iterated
+        total (int, optional): number of iterations
+        nworkers (int, optional): number of workers, default is 2
+
+    Example:
+        .. code-block:: python
+        def add(a, b):
+            return a + b
+
+        a = [1, 2]
+        b = [3, 4]
+        res = MultiThread(add).run(a, b)
+        print(res)
+        # [4, 6]
     """
 
-    def __init__(self, process, total=None, nworkers=2, **kwargs):
-        super().__init__(process, total)
+    def __init__(self, func, total=None, nworkers=2, **kwargs):
+        super().__init__(func, total)
 
         self.nworkers = nworkers if nworkers > 0 else 2
 
@@ -278,12 +358,27 @@ class ParallelProcess(Iterator):
     """
     ParallelProcess
 
+    Parameters:
+        func (callable): function to be iterated
+        total (int, optional): number of iterations
+        nprocs (int, optional): number of processes, default is `multiprocessing.cpu_count()`
+
+    Example:
+        .. code-block:: python
+        def add(arr1, arr2):
+            return [a + b for a, b in zip(arr1, arr2)]
+
+        a = [1, 2, 3, 4]
+        b = [3, 4, 5, 6]
+        res = ParallelProcess(add, nprocs=2).run(a, b)
+        print(res)
+        # [[4, 6], [8, 10]]
     """
 
     def __init__(
-        self, process, total=None, nprocs=multiprocessing.cpu_count(), **kwargs
+        self, func, total=None, nprocs=multiprocessing.cpu_count(), **kwargs
     ):
-        super().__init__(process, total)
+        super().__init__(func, total)
 
         self.nprocs = nprocs if nprocs > 0 else multiprocessing.cpu_count()
 
