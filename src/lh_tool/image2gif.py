@@ -2,7 +2,7 @@ import os
 import glob
 import imageio.v2 as iio
 import argparse
-from lh_tool.Iterator import SingleProcess, MultiProcess
+from lh_tool.iterator import SingleProcess, MultiProcess
 
 
 def image2gif(image_path, gif_file, postfix, duration, speed=1):

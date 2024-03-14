@@ -1,3 +1,12 @@
+# -*- encoding: utf-8 -*-
+"""
+@File    :   email.py
+@Time    :   2024/03/14 10:59:46
+@Author  :   lihao57
+@Version :   1.0
+@Contact :   lihao57@baidu.com
+"""
+
 import os
 import smtplib
 from yacs.config import CfgNode

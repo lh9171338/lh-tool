@@ -3,7 +3,7 @@ import cv2
 import glob
 import tqdm
 import argparse
-from lh_tool.Iterator import SingleProcess, MultiProcess
+from lh_tool.iterator import SingleProcess, MultiProcess
 
 
 def video2images(video_file, image_path, postfix, frameSize=None):

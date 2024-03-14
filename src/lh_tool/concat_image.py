@@ -3,7 +3,7 @@ import cv2
 import glob
 import numpy as np
 import argparse
-from lh_tool.Iterator import SingleProcess, MultiProcess
+from lh_tool.iterator import SingleProcess, MultiProcess
 import imageio.v2 as iio
 
 
