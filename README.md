@@ -9,6 +9,7 @@ This is a tool package.
  - [x] 2023.06.30: Add image channel conversion between imageio and cv2
  - [x] 2023.06.12: Fix the bug that the ParallelProcess iterator returns results in the wrong order
  - [x] 2023.06.11: Add ParallelProcess and AsyncMultiProcess iterator
+ - [x] 2023.03.14: Add Timer and TimeConsumption module
 
 # Tools
 
@@ -33,6 +34,8 @@ This is a tool package.
     * MultiThread
     * AsyncProcess
     * AsyncMultiProcess
+* timer
+* time_consumption
 
 # Install
 
@@ -42,9 +45,9 @@ git clone https://github.com/lh9171338/lh-tool.git
 
 cd lh-tool
 
-py -m build
+python -m build
 
-pip install dist/lh_tool-1.8.0-py3-none-any.whl
+pip install dist/lh_tool-1.9.0-py3-none-any.whl
 ```
 
 * Install from the Python Package Index (PyPI)
