@@ -16,6 +16,8 @@ sys.path.append("../src")
 from lh_tool.time_consumption import (
     TimeConsumptionDecorator,
     TimeConsumptionContextManager,
+    TimeConsumption,
+    time_consumption,
 )
 
 
@@ -41,6 +43,34 @@ class TestConsumption(unittest.TestCase):
     def test_time_consumption_context_manager(self):
         """test time consumption context manager"""
         with TimeConsumptionContextManager():
+            time.sleep(0.1)
+        self.assertTrue(True)
+
+    def test_time_consumption_class(self):
+        """test time consumption class"""
+
+        @TimeConsumption()
+        def func():
+            """func"""
+            time.sleep(0.1)
+
+        func()
+
+        with TimeConsumption():
+            time.sleep(0.1)
+        self.assertTrue(True)
+
+    def test_time_consumption_function(self):
+        """test time consumption function"""
+
+        @time_consumption()
+        def func():
+            """func"""
+            time.sleep(0.1)
+
+        func()
+
+        with time_consumption():
             time.sleep(0.1)
         self.assertTrue(True)
 
