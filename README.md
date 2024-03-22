@@ -10,6 +10,7 @@ This is a tool package.
  - [x] 2023.06.12: Fix the bug that the ParallelProcess iterator returns results in the wrong order
  - [x] 2023.06.11: Add ParallelProcess and AsyncMultiProcess iterator
  - [x] 2023.03.14: Add Timer and TimeConsumption module
+ - [x] 2023.03.22: Add file rename module `rename_file`
 
 # Tools
 
@@ -26,6 +27,7 @@ This is a tool package.
 * compress_pdf
 * startup
 * rename_postfix
+* rename_file
 * email
 * iterotar
     * SingleProcess
@@ -47,7 +49,7 @@ cd lh-tool
 
 python -m build
 
-pip install dist/lh_tool-1.9.0-py3-none-any.whl
+pip install dist/lh_tool-1.9.1-py3-none-any.whl
 ```
 
 * Install from the Python Package Index (PyPI)
