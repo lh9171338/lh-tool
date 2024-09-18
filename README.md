@@ -5,6 +5,7 @@ This is a tool package.
 
 # Updates
 
+ - [x] 2024.09.18: Add pcd2ply module
  - [x] 2023.12.05: Add CI/CD
  - [x] 2023.06.30: Add image channel conversion between imageio and cv2
  - [x] 2023.06.12: Fix the bug that the ParallelProcess iterator returns results in the wrong order
@@ -38,6 +39,7 @@ This is a tool package.
     * AsyncMultiProcess
 * timer
 * time_consumption
+* pcd2ply
 
 # Install
 
@@ -49,7 +51,7 @@ cd lh-tool
 
 python -m build
 
-pip install dist/lh_tool-1.9.2-py3-none-any.whl
+pip install dist/lh_tool-1.10.0-py3-none-any.whl
 ```
 
 * Install from the Python Package Index (PyPI)
