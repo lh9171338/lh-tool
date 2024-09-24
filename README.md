@@ -51,10 +51,17 @@ cd lh-tool
 
 python -m build
 
-pip install dist/lh_tool-1.10.0-py3-none-any.whl
+pip install dist/lh_tool-1.10.1-py3-none-any.whl
 ```
 
 * Install from the Python Package Index (PyPI)
 ```shell
+# install base
 pip install lh_tool
+
+# install with specific dependencies, support: [cv, email, pdf, excel, pcd]
+pip install lh_tool[cv]
+
+# install with all dependencies
+pip install lh_tool[all]
 ```
