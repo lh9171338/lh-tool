@@ -26,7 +26,12 @@ class Iterator:
         total (int, optional): number of iterations
     """
 
-    def __init__(self, func, total=None, **kwargs):
+    def __init__(
+        self,
+        func,
+        total=None,
+        **kwargs,
+    ):
         self.func = func
         self.total = total
         self.dynamic_args = None
@@ -110,7 +115,12 @@ class SingleProcess(Iterator):
         # [4, 6]
     """
 
-    def __init__(self, func, total=None, **kwargs):
+    def __init__(
+        self,
+        func,
+        total=None,
+        **kwargs,
+    ):
         super().__init__(func, total)
 
     def run(self, *args, **kwargs):
@@ -152,7 +162,11 @@ class MultiProcess(Iterator):
     """
 
     def __init__(
-        self, func, total=None, nprocs=multiprocessing.cpu_count(), **kwargs
+        self,
+        func,
+        total=None,
+        nprocs=multiprocessing.cpu_count(),
+        **kwargs,
     ):
         super().__init__(func, total)
 
@@ -201,7 +215,13 @@ class AsyncProcess(Iterator):
         # [4, 6]
     """
 
-    def __init__(self, func, total=None, concurrency=0, **kwargs):
+    def __init__(
+        self,
+        func,
+        total=None,
+        concurrency=0,
+        **kwargs,
+    ):
         super().__init__(func, total)
 
         self.concurrency = concurrency
@@ -325,7 +345,13 @@ class MultiThread(Iterator):
         # [4, 6]
     """
 
-    def __init__(self, func, total=None, nworkers=2, **kwargs):
+    def __init__(
+        self,
+        func,
+        total=None,
+        nworkers=2,
+        **kwargs,
+    ):
         super().__init__(func, total)
 
         self.nworkers = nworkers if nworkers > 0 else 2
@@ -362,9 +388,11 @@ class ParallelProcess(Iterator):
         func (callable): function to be iterated
         total (int, optional): number of iterations
         nprocs (int, optional): number of processes, default is `multiprocessing.cpu_count()`
+        is_single_task_func (bool, optional): whether the function is single task, default is False
 
     Example:
         .. code-block:: python
+        # For multi-task function
         def add(arr1, arr2):
             return [a + b for a, b in zip(arr1, arr2)]
 
@@ -373,14 +401,32 @@ class ParallelProcess(Iterator):
         res = ParallelProcess(add, nprocs=2).run(a, b)
         print(res)
         # [[4, 6], [8, 10]]
+
+        # For single-task function
+        def add(a, b):
+            return a + b
+
+        a = [1, 2, 3, 4]
+        b = [3, 4, 5, 6]
+        res = ParallelProcess(add, nprocs=2, is_single_task_func=True).run(a, b)
+        print(res)
+        # [4, 6, 8, 10]
     """
 
     def __init__(
-        self, func, total=None, nprocs=multiprocessing.cpu_count(), **kwargs
+        self,
+        func,
+        total=None,
+        nprocs=multiprocessing.cpu_count(),
+        is_single_task_func=False,
+        **kwargs,
     ):
+        if is_single_task_func:
+            func = SingleProcess(func).run
         super().__init__(func, total)
 
         self.nprocs = nprocs if nprocs > 0 else multiprocessing.cpu_count()
+        self.is_single_task_func = is_single_task_func
 
     def parse(self, *args, **kwargs):
         """parse"""
@@ -480,5 +526,8 @@ class ParallelProcess(Iterator):
             p.join()
 
         ret_list = [results_dict[idx] for idx in range(self.nprocs)]
+        if self.is_single_task_func:
+            # flatten the ret_list from 2d to 1d
+            ret_list = [_ for sub_ret_list in ret_list for _ in sub_ret_list]
 
         return ret_list

@@ -103,6 +103,11 @@ class TestIterator(unittest.TestCase):
         result_list = [_ for ret in ret_list for _ in ret]
         self.assertEqual(result_list, self.res)
 
+        result_list = ParallelProcess(self.process, is_single_task_func=True).run(
+            self.a, self.b, opt="+"
+        )
+        self.assertEqual(result_list, self.res)
+
 
 if __name__ == "__main__":
     unittest.main()
