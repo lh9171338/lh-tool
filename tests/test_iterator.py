@@ -66,6 +66,13 @@ class TestIterator(unittest.TestCase):
         """test single process"""
         result_list = SingleProcess(self.process).run(self.a, self.b, opt="+")
         self.assertEqual(result_list, self.res)
+        exception = None
+        try:
+            result_list = SingleProcess(self.process).run(self.a, self.b, "+")
+        except Exception as e:
+            exception = e
+            print(e)
+        self.assertIsInstance(exception, RuntimeError)
 
     def test_multi_process(self):
         """test multi process"""
@@ -107,6 +114,15 @@ class TestIterator(unittest.TestCase):
             self.a, self.b, opt="+"
         )
         self.assertEqual(result_list, self.res)
+        exception = None
+        try:
+            ret_list = ParallelProcess(self.process_batch).run(
+                self.a, self.b, "+"
+            )
+        except Exception as e:
+            exception = e
+            print(e)
+        self.assertIsInstance(exception, RuntimeError)
 
 
 if __name__ == "__main__":

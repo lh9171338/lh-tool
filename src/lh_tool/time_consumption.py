@@ -48,7 +48,7 @@ class TimeConsumptionDecorator:
             end_time = time.time()
             self.print_func(
                 "{} time consuming: {}".format(
-                    func.__name__, end_time - start_time
+                    str(func).split(" ")[1], end_time - start_time
                 )
             )
             return ret
@@ -133,7 +133,7 @@ class TimeConsumption:
             start_time = time.time()
             ret = func(*args, **kwargs)
             end_time = time.time()
-            context = self.context if self.context else func.__name__
+            context = self.context if self.context else str(func).split(" ")[1]
             self.print_func(
                 "{} time consuming: {}".format(context, end_time - start_time)
             )

@@ -64,13 +64,23 @@ class Iterator:
         # parse args
         self.dynamic_args = [[] for _ in range(self.total)]
         self.static_args = []
+        dynamic_arg_flags = []
         for arg in args:
             if isinstance(arg, list):
                 assert len(arg) == self.total, f"{len(arg)} != {self.total}"
                 for i, val in enumerate(arg):
                     self.dynamic_args[i].append(val)
+                dynamic_arg_flags.append(True)
             else:
                 self.static_args.append(arg)
+                dynamic_arg_flags.append(False)
+
+        # Assert static arguments precede dynamic arguments
+        if len(dynamic_arg_flags) > 1:
+            dynamic_arg_flags = np.array(dynamic_arg_flags)
+            if (dynamic_arg_flags[:-1] > dynamic_arg_flags[1:]).any():
+                msg = ["dynamic" if flag else "static" for flag in dynamic_arg_flags]
+                raise RuntimeError(f"dynamic arguments precede static arguments: {msg}")
 
         # parse kwargs
         self.dynamic_kwargs = [{} for _ in range(self.total)]
@@ -455,6 +465,7 @@ class ParallelProcess(Iterator):
         # parse args
         self.dynamic_args = [[] for _ in range(self.nprocs)]
         self.static_args = []
+        dynamic_arg_flags = []
         for arg in args:
             if isinstance(arg, list):
                 assert (
@@ -468,8 +479,17 @@ class ParallelProcess(Iterator):
                         self.dynamic_args[i].append(
                             arg[indices[i] : indices[i + 1]]
                         )
+                dynamic_arg_flags.append(True)
             else:
                 self.static_args.append(arg)
+                dynamic_arg_flags.append(False)
+
+        # Assert static arguments precede dynamic arguments
+        if len(dynamic_arg_flags) > 1:
+            dynamic_arg_flags = np.array(dynamic_arg_flags)
+            if (dynamic_arg_flags[:-1] > dynamic_arg_flags[1:]).any():
+                msg = ["dynamic" if flag else "static" for flag in dynamic_arg_flags]
+                raise RuntimeError(f"dynamic arguments precede static arguments: {msg}")
 
         # parse kwargs
         self.dynamic_kwargs = [{} for _ in range(self.nprocs)]
