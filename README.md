@@ -5,6 +5,7 @@ This is a tool package.
 
 # Updates
 
+ - [x] 2024.12.27: Add GPU monitor module
  - [x] 2024.09.18: Add pcd2ply module
  - [x] 2023.12.05: Add CI/CD
  - [x] 2023.06.30: Add image channel conversion between imageio and cv2
@@ -40,6 +41,7 @@ This is a tool package.
 * timer
 * time_consumption
 * pcd2ply
+* monitor_gpu
 
 # Install
 
@@ -51,7 +53,7 @@ cd lh-tool
 
 python -m build
 
-pip install dist/lh_tool-1.10.4-py3-none-any.whl
+pip install dist/lh_tool-1.11.0-py3-none-any.whl
 ```
 
 * Install from the Python Package Index (PyPI)
