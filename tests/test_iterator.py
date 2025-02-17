@@ -104,7 +104,7 @@ class TestIterator(unittest.TestCase):
 
     def test_parallel_process(self):
         """test parallel process"""
-        ret_list = ParallelProcess(self.process_batch).run(
+        ret_list = ParallelProcess(self.process_batch, is_single_task_func=False).run(
             self.a, self.b, opt="+"
         )
         result_list = [_ for ret in ret_list for _ in ret]
@@ -116,7 +116,7 @@ class TestIterator(unittest.TestCase):
         self.assertEqual(result_list, self.res)
         exception = None
         try:
-            ret_list = ParallelProcess(self.process_batch).run(
+            ret_list = ParallelProcess(self.process_batch, is_single_task_func=False).run(
                 self.a, self.b, "+"
             )
         except Exception as e:

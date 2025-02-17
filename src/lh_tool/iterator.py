@@ -15,6 +15,7 @@ import functools
 import asyncio
 import aiomultiprocess
 import numpy as np
+import time
 
 
 class Iterator:
@@ -147,6 +148,20 @@ class SingleProcess(Iterator):
             desc=self.func.__name__,
         ):
             ret_list.append(self.partial_func(*args, **kwargs))
+        return ret_list
+
+    def _run(self, _counter: multiprocessing.Value, *args, **kwargs):
+        """run - Please ensure that static arguments precede dynamic arguments"""
+
+        # parse
+        self.parse(*args, **kwargs)
+
+        # run
+        ret_list = []
+        for args, kwargs in zip(self.dynamic_args, self.dynamic_kwargs):
+            ret_list.append(self.partial_func(*args, **kwargs))
+            with _counter.get_lock():
+                _counter.value += 1
         return ret_list
 
 
@@ -398,7 +413,8 @@ class ParallelProcess(Iterator):
         func (callable): function to be iterated
         total (int, optional): number of iterations
         nprocs (int, optional): number of processes, default is `multiprocessing.cpu_count()`
-        is_single_task_func (bool, optional): whether the function is single task, default is False
+        is_single_task_func (bool, optional): whether the function is single task, default is True (when version >= 1.11.1)
+        pbar_refresh_interval (float, optional): interval of progress bar refreshing, default is 1.0s
 
     Example:
         .. code-block:: python
@@ -428,15 +444,17 @@ class ParallelProcess(Iterator):
         func,
         total=None,
         nprocs=multiprocessing.cpu_count(),
-        is_single_task_func=False,
+        is_single_task_func=True,
+        pbar_refresh_interval=1.0,
         **kwargs,
     ):
         if is_single_task_func:
-            func = SingleProcess(func).run
+            func = SingleProcess(func)._run
         super().__init__(func, total)
 
         self.nprocs = nprocs if nprocs > 0 else multiprocessing.cpu_count()
         self.is_single_task_func = is_single_task_func
+        self.pbar_refresh_interval = pbar_refresh_interval
 
     def parse(self, *args, **kwargs):
         """parse"""
@@ -529,25 +547,53 @@ class ParallelProcess(Iterator):
         procs = []
         manager = multiprocessing.Manager()
         results_dict = manager.dict()
-        for i in range(self.nprocs):
-            p = multiprocessing.Process(
-                target=self,
-                args=(
-                    self.dynamic_args[i],
-                    self.dynamic_kwargs[i],
-                    results_dict,
-                    i,
-                ),
-            )
-            procs.append(p)
-            p.start()
-
-        for p in procs:
-            p.join()
-
-        ret_list = [results_dict[idx] for idx in range(self.nprocs)]
         if self.is_single_task_func:
+            counter = multiprocessing.Value("i", 0)
+            for i in range(self.nprocs):
+                p = multiprocessing.Process(
+                    target=self,
+                    args=(
+                        [counter] + self.dynamic_args[i],
+                        self.dynamic_kwargs[i],
+                        results_dict,
+                        i,
+                    ),
+                )
+                procs.append(p)
+                p.start()
+
+            # display progress bar
+            with tqdm.tqdm(total=self.total) as pbar:
+                while True:
+                    pbar.n = counter.value
+                    pbar.refresh()
+                    time.sleep(self.pbar_refresh_interval)
+                    if pbar.n == self.total:
+                        break
+
+            for p in procs:
+                p.join()
+
+            ret_list = [results_dict[idx] for idx in range(self.nprocs)]
             # flatten the ret_list from 2d to 1d
             ret_list = [_ for sub_ret_list in ret_list for _ in sub_ret_list]
+        else:
+            for i in range(self.nprocs):
+                p = multiprocessing.Process(
+                    target=self,
+                    args=(
+                        self.dynamic_args[i],
+                        self.dynamic_kwargs[i],
+                        results_dict,
+                        i,
+                    ),
+                )
+                procs.append(p)
+                p.start()
+
+            for p in procs:
+                p.join()
+
+            ret_list = [results_dict[idx] for idx in range(self.nprocs)]
 
         return ret_list
