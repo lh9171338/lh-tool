@@ -9,12 +9,12 @@
 
 
 import time
-from typing import Callable
+from typing import Callable, Optional
 
 
 class TimeConsumptionDecorator:
     """
-    TimeConsumptionDecorator used to print the module time consumption
+    TimeConsumptionDecorator used to print the module time consumption (Deprecated)
 
     Parameters:
         print_func (callable): The print function used to print the time consumption, default is `print`
@@ -38,7 +38,7 @@ class TimeConsumptionDecorator:
     """
 
     def __init__(self, print_func: Callable = print):
-        self.print_func = print_func
+        self._print_func = print_func
 
     def __call__(self, func):
         def wrapper(*args, **kwargs):
@@ -46,7 +46,7 @@ class TimeConsumptionDecorator:
             start_time = time.time()
             ret = func(*args, **kwargs)
             end_time = time.time()
-            self.print_func(
+            self._print_func(
                 "{} time consuming: {}".format(
                     str(func).split(" ")[1], end_time - start_time
                 )
@@ -59,7 +59,7 @@ class TimeConsumptionDecorator:
 
 class TimeConsumptionContextManager:
     """
-    TimeConsumptionContextManager used to print the module time consumption
+    TimeConsumptionContextManager used to print the module time consumption (Deprecated)
 
     Parameters:
         context (str): The context used to print the time consumption, default is ''
@@ -79,8 +79,8 @@ class TimeConsumptionContextManager:
     """
 
     def __init__(self, context: str = "", print_func: Callable = print):
-        self.context = context
-        self.print_func = print_func
+        self._context = context
+        self._print_func = print_func
 
     def __enter__(self):
         self.start_time = time.time()
@@ -88,14 +88,14 @@ class TimeConsumptionContextManager:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.end_time = time.time()
-        if self.context:
-            self.print_func(
+        if self._context:
+            self._print_func(
                 "{} time consuming: {}".format(
-                    self.context, self.end_time - self.start_time
+                    self._context, self.end_time - self.start_time
                 )
             )
         else:
-            self.print_func(
+            self._print_func(
                 "time consuming: {}".format(self.end_time - self.start_time)
             )
 
@@ -107,6 +107,7 @@ class TimeConsumption:
     Parameters:
         context (str): The context used to print the time consumption, default is ''
         print_func (callable): The print function used to print the time consumption, default is `print`
+        format_func (Optional[Callable]): The format function used to format the output string, default is None
 
     Example:
         .. code-block:: python
@@ -123,20 +124,21 @@ class TimeConsumption:
             time.sleep(1)
     """
 
-    def __init__(self, context: str = "", print_func: Callable = print):
-        self.context = context
-        self.print_func = print_func
+    def __init__(self, context: str = "", print_func: Callable = print, format_func: Optional[Callable] = None):
+        self._context = context
+        self._print_func = print_func
+        self._format_func = format_func
 
     def __call__(self, func):
         def wrapper(*args, **kwargs):
             """wrapper"""
             start_time = time.time()
             ret = func(*args, **kwargs)
-            end_time = time.time()
-            context = self.context if self.context else str(func).split(" ")[1]
-            self.print_func(
-                "{} time consuming: {}".format(context, end_time - start_time)
-            )
+            delta_time = time.time() - start_time
+            if self._format_func is not None:
+                delta_time = self._format_func(delta_time)
+            context = self._context if self._context else str(func).split(" ")[1]
+            self._print_func(f"{context} time consuming: {delta_time}")
             return ret
 
         wrapper.__name__ = func.__name__
@@ -147,26 +149,23 @@ class TimeConsumption:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.end_time = time.time()
-        if self.context:
-            self.print_func(
-                "{} time consuming: {}".format(
-                    self.context, self.end_time - self.start_time
-                )
-            )
+        delta_time = time.time() - self.start_time
+        if self._format_func is not None:
+            delta_time = self._format_func(delta_time)
+        if self._context:
+            self._print_func(f"{self._context} time consuming: {delta_time}")
         else:
-            self.print_func(
-                "time consuming: {}".format(self.end_time - self.start_time)
-            )
+            self._print_func(f"time consuming: {delta_time}")
 
 
-def time_consumption(context: str = "", print_func: Callable = print):
+def time_consumption(context: str = "", print_func: Callable = print, format_func :Optional[Callable] = None):
     """
     `time_consumption` used to print the module time consumption
 
     Parameters:
         context (str): The context used to print the time consumption, default is ''
         print_func (callable): The print function used to print the time consumption, default is `print`
+        format_func (Optional[Callable]): The format function used to format the output string, default is None
     Example:
         .. code-block:: python
 
@@ -181,4 +180,4 @@ def time_consumption(context: str = "", print_func: Callable = print):
         with time_consumption("block"):
             time.sleep(1)
     """
-    return TimeConsumption(context, print_func)
+    return TimeConsumption(context=context, print_func=print_func, format_func=format_func)

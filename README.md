@@ -5,6 +5,7 @@ This is a tool package.
 
 # Updates
 
+ - [x] 2225.04.17: Add GPUPeakMemoryMonitor module
  - [x] 2024.12.27: Add GPU monitor module
  - [x] 2024.09.18: Add pcd2ply module
  - [x] 2023.12.05: Add CI/CD
@@ -42,6 +43,7 @@ This is a tool package.
 * time_consumption
 * pcd2ply
 * monitor_gpu
+* GPUPeakMemoryMonitor
 
 # Install
 
@@ -53,7 +55,7 @@ cd lh-tool
 
 python -m build
 
-pip install dist/lh_tool-1.11.1-py3-none-any.whl
+pip install dist/lh_tool-1.12.0-py3-none-any.whl
 ```
 
 * Install from the Python Package Index (PyPI)
@@ -61,7 +63,7 @@ pip install dist/lh_tool-1.11.1-py3-none-any.whl
 # install base
 pip install lh_tool
 
-# install with specific dependencies, support: [cv, email, pdf, excel, pcd]
+# install with specific dependencies, support: [cv, email, pdf, excel, pcd, gpu]
 pip install lh_tool[cv]
 
 # install with all dependencies

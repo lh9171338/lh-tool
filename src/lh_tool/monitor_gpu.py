@@ -14,6 +14,112 @@ import logging
 import argparse
 import GPUtil
 import numpy as np
+import pynvml
+import threading
+from typing import Optional, Union, List, Callable
+
+
+class GPUPeakMemoryMonitor:
+    """GPU Peak Memory Monitor
+    
+    Parameters:
+        gpu_ids (Optional[Union[List[int], int]]): The ids of the GPU device that you want to monitor, default is None, meaning all GPUs
+        interval (float): The interval between sampling in seconds, default is 1.0
+        format_func (Optional[Callable]): The function used to format the output message, default is None
+        print_func (Optional[Callable]): The function used to print the output message, default is `print`
+
+    Example:
+        .. code-block:: python
+
+        monitor = GPUPeakMemoryMonitor(gpu_ids=0)
+        monitor.start()
+        # to do something
+        peak_memories = monitor.stop()
+
+        # using as context manager
+        with GPUPeakMemoryMonitor(gpu_ids=None, format_func=lambda x: f"{x / (1024 ** 3):.1f}GB"):
+            # to do something
+    """
+
+    def __init__(
+        self,
+        gpu_ids: Optional[Union[List[int], int]] = None,
+        interval: float = 1.0,
+        format_func: Optional[Callable] = None,
+        print_func: Optional[Callable] = print,
+    ):
+        if gpu_ids is None:
+            import torch
+            gpu_ids = list(range(torch.cuda.device_count()))
+        elif isinstance(gpu_ids, int):
+            gpu_ids = [gpu_ids]
+        assert isinstance(gpu_ids, list), f"`gpu_ids` must be a list, but got {type(gpu_ids)}"
+        assert len(gpu_ids), "`gpu_ids` cannot be empty"
+
+        self._gpu_ids = gpu_ids
+        self._interval = interval
+        self._format_func = format_func
+        self._print_func = print_func
+
+        self._peak_memories = [0] * len(self._gpu_ids)
+        self._stop_event = threading.Event()
+        self._thread: Optional[threading.Thread] = None
+
+    def _monitor(self):
+        """monitor"""
+        pynvml.nvmlInit()
+        handles = [pynvml.nvmlDeviceGetHandleByIndex(gpu_id) for gpu_id in self._gpu_ids]
+
+        try:
+            while not self._stop_event.is_set():
+                for i, handle in enumerate(handles):
+                    mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+                    current_memory = mem_info.used
+                    if current_memory > self._peak_memories[i]:
+                        self._peak_memories[i] = current_memory
+                time.sleep(self._interval)
+        finally:
+            pynvml.nvmlShutdown()
+
+    def start(self):
+        """start"""
+        if self._thread is not None:
+            raise RuntimeError("Monitor is already running")
+        self.reset()
+        self._thread = threading.Thread(target=self._monitor)
+        self._thread.start()
+
+    def stop(self) -> List[int]:
+        """stop"""
+        if self._thread is None:
+            raise RuntimeError("Monitor is not running")
+        self._stop_event.set()
+        self._thread.join()
+        self._thread = None
+        self._stop_event.clear()
+        peak_memories = self.peak_memories
+        if self._print_func is not None:
+            self._print_func(f"Peak memory usage: {peak_memories}")
+        return peak_memories
+
+    def reset(self):
+        """reset"""
+        self._peak_memories = [0] * len(self._gpu_ids)
+
+    @property
+    def peak_memories(self) -> List[int]:
+        """peak memories"""
+        if self._format_func is not None:
+            return [self._format_func(x) for x in self._peak_memories]
+        else:
+            return self._peak_memories
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, *args):
+        self.stop()
 
 
 def monitor(args):
