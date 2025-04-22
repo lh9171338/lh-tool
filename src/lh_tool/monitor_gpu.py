@@ -17,12 +17,14 @@ import numpy as np
 import pynvml
 import threading
 from typing import Optional, Union, List, Callable
+import functools
 
 
 class GPUPeakMemoryMonitor:
     """GPU Peak Memory Monitor
-    
+
     Parameters:
+        context (str): The context used to print the time consumption, default is ''
         gpu_ids (Optional[Union[List[int], int]]): The ids of the GPU device that you want to monitor, default is None, meaning all GPUs
         interval (float): The interval between sampling in seconds, default is 1.0
         format_func (Optional[Callable]): The function used to format the output message, default is None
@@ -31,18 +33,28 @@ class GPUPeakMemoryMonitor:
     Example:
         .. code-block:: python
 
-        monitor = GPUPeakMemoryMonitor(gpu_ids=0)
+        monitor = GPUPeakMemoryMonitor("block", gpu_ids=0)
+        # disable print
+        # monitor = GPUPeakMemoryMonitor("block", gpu_ids=0, print_func=None)
         monitor.start()
         # to do something
         peak_memories = monitor.stop()
 
-        # using as context manager
-        with GPUPeakMemoryMonitor(gpu_ids=None, format_func=lambda x: f"{x / (1024 ** 3):.1f}GB"):
+        # used as context manager
+        with GPUPeakMemoryMonitor("block", gpu_ids=None, format_func=lambda x: f"{x / (1024 ** 3):.1f}GB"):
             # to do something
+
+        # used as decorator
+        @GPUPeakMemoryMonitor()
+        def test():
+            # to do something
+
+        test()
     """
 
     def __init__(
         self,
+        context: str = "",
         gpu_ids: Optional[Union[List[int], int]] = None,
         interval: float = 1.0,
         format_func: Optional[Callable] = None,
@@ -50,12 +62,16 @@ class GPUPeakMemoryMonitor:
     ):
         if gpu_ids is None:
             import torch
+
             gpu_ids = list(range(torch.cuda.device_count()))
         elif isinstance(gpu_ids, int):
             gpu_ids = [gpu_ids]
-        assert isinstance(gpu_ids, list), f"`gpu_ids` must be a list, but got {type(gpu_ids)}"
+        assert isinstance(
+            gpu_ids, list
+        ), f"`gpu_ids` must be a list, but got {type(gpu_ids)}"
         assert len(gpu_ids), "`gpu_ids` cannot be empty"
 
+        self._context = context
         self._gpu_ids = gpu_ids
         self._interval = interval
         self._format_func = format_func
@@ -68,7 +84,10 @@ class GPUPeakMemoryMonitor:
     def _monitor(self):
         """monitor"""
         pynvml.nvmlInit()
-        handles = [pynvml.nvmlDeviceGetHandleByIndex(gpu_id) for gpu_id in self._gpu_ids]
+        handles = [
+            pynvml.nvmlDeviceGetHandleByIndex(gpu_id)
+            for gpu_id in self._gpu_ids
+        ]
 
         try:
             while not self._stop_event.is_set():
@@ -99,7 +118,12 @@ class GPUPeakMemoryMonitor:
         self._stop_event.clear()
         peak_memories = self.peak_memories
         if self._print_func is not None:
-            self._print_func(f"Peak memory usage: {peak_memories}")
+            if self._context:
+                self._print_func(
+                    f"{self._context} peak memory usage: {peak_memories}"
+                )
+            else:
+                self._print_func(f"peak memory usage: {peak_memories}")
         return peak_memories
 
     def reset(self):
@@ -120,6 +144,20 @@ class GPUPeakMemoryMonitor:
 
     def __exit__(self, *args):
         self.stop()
+
+    def __call__(self, func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            """wrapper"""
+            if not self._context:
+                self._context = str(func).split(" ")[1]
+            self.start()
+            ret = func(*args, **kwargs)
+            self.stop()
+            return ret
+
+        wrapper.__name__ = func.__name__
+        return wrapper
 
 
 def monitor(args):
@@ -165,8 +203,13 @@ def monitor(args):
             if low_utilization_start_time is None:
                 low_utilization_start_time = cur_time
             else:
-                logging.info(f"low utilization detected: {cur_time - low_utilization_start_time}s")
-                if cur_time - low_utilization_start_time >= args.time_threshold:
+                logging.info(
+                    f"low utilization detected: {cur_time - low_utilization_start_time}s"
+                )
+                if (
+                    cur_time - low_utilization_start_time
+                    >= args.time_threshold
+                ):
                     trigger = True
                     logging.warning(
                         f"low utilization detected, utilization: {utilizations}"
@@ -178,8 +221,13 @@ def monitor(args):
             if constant_utilization_start_time is None:
                 constant_utilization_start_time = cur_time
             else:
-                logging.info(f"constant utilization detected: {cur_time - constant_utilization_start_time}s")
-                if cur_time - constant_utilization_start_time >= args.time_threshold:
+                logging.info(
+                    f"constant utilization detected: {cur_time - constant_utilization_start_time}s"
+                )
+                if (
+                    cur_time - constant_utilization_start_time
+                    >= args.time_threshold
+                ):
                     trigger = True
                     logging.warning(
                         f"constant utilization detected, utilization: {utilizations}"

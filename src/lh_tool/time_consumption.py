@@ -10,6 +10,7 @@
 
 import time
 from typing import Callable, Optional
+import functools
 
 
 class TimeConsumptionDecorator:
@@ -41,6 +42,7 @@ class TimeConsumptionDecorator:
         self._print_func = print_func
 
     def __call__(self, func):
+        @functools.wraps(func)
         def wrapper(*args, **kwargs):
             """wrapper"""
             start_time = time.time()
@@ -124,12 +126,18 @@ class TimeConsumption:
             time.sleep(1)
     """
 
-    def __init__(self, context: str = "", print_func: Callable = print, format_func: Optional[Callable] = None):
+    def __init__(
+        self,
+        context: str = "",
+        print_func: Callable = print,
+        format_func: Optional[Callable] = None,
+    ):
         self._context = context
         self._print_func = print_func
         self._format_func = format_func
 
     def __call__(self, func):
+        @functools.wraps(func)
         def wrapper(*args, **kwargs):
             """wrapper"""
             start_time = time.time()
@@ -137,7 +145,9 @@ class TimeConsumption:
             delta_time = time.time() - start_time
             if self._format_func is not None:
                 delta_time = self._format_func(delta_time)
-            context = self._context if self._context else str(func).split(" ")[1]
+            context = (
+                self._context if self._context else str(func).split(" ")[1]
+            )
             self._print_func(f"{context} time consuming: {delta_time}")
             return ret
 
@@ -158,7 +168,11 @@ class TimeConsumption:
             self._print_func(f"time consuming: {delta_time}")
 
 
-def time_consumption(context: str = "", print_func: Callable = print, format_func :Optional[Callable] = None):
+def time_consumption(
+    context: str = "",
+    print_func: Callable = print,
+    format_func: Optional[Callable] = None,
+):
     """
     `time_consumption` used to print the module time consumption
 
@@ -180,4 +194,6 @@ def time_consumption(context: str = "", print_func: Callable = print, format_fun
         with time_consumption("block"):
             time.sleep(1)
     """
-    return TimeConsumption(context=context, print_func=print_func, format_func=format_func)
+    return TimeConsumption(
+        context=context, print_func=print_func, format_func=format_func
+    )
