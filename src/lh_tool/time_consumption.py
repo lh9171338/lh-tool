@@ -48,11 +48,7 @@ class TimeConsumptionDecorator:
             start_time = time.time()
             ret = func(*args, **kwargs)
             end_time = time.time()
-            self._print_func(
-                "{} time consuming: {}".format(
-                    str(func).split(" ")[1], end_time - start_time
-                )
-            )
+            self._print_func("{} time consuming: {}".format(str(func).split(" ")[1], end_time - start_time))
             return ret
 
         wrapper.__name__ = func.__name__
@@ -91,15 +87,9 @@ class TimeConsumptionContextManager:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.end_time = time.time()
         if self._context:
-            self._print_func(
-                "{} time consuming: {}".format(
-                    self._context, self.end_time - self.start_time
-                )
-            )
+            self._print_func("{} time consuming: {}".format(self._context, self.end_time - self.start_time))
         else:
-            self._print_func(
-                "time consuming: {}".format(self.end_time - self.start_time)
-            )
+            self._print_func("time consuming: {}".format(self.end_time - self.start_time))
 
 
 class TimeConsumption:
@@ -145,9 +135,7 @@ class TimeConsumption:
             delta_time = time.time() - start_time
             if self._format_func is not None:
                 delta_time = self._format_func(delta_time)
-            context = (
-                self._context if self._context else str(func).split(" ")[1]
-            )
+            context = self._context if self._context else str(func).split(" ")[1]
             self._print_func(f"{context} time consuming: {delta_time}")
             return ret
 
@@ -194,6 +182,4 @@ def time_consumption(
         with time_consumption("block"):
             time.sleep(1)
     """
-    return TimeConsumption(
-        context=context, print_func=print_func, format_func=format_func
-    )
+    return TimeConsumption(context=context, print_func=print_func, format_func=format_func)

@@ -8,9 +8,7 @@ from lh_tool.iterator import SingleProcess, MultiProcess
 
 def video2images(video_file, image_path, postfix, frameSize=None):
     assert os.path.isfile(video_file), f"'{video_file}' is not a file"
-    image_path = (
-        os.path.splitext(video_file)[0] if image_path is None else image_path
-    )
+    image_path = os.path.splitext(video_file)[0] if image_path is None else image_path
     os.makedirs(image_path, exist_ok=True)
 
     videoCapture = cv2.VideoCapture(video_file)
@@ -47,18 +45,14 @@ def main():
         default="png",
         help="postfix of image filename",
     )
-    parser.add_argument(
-        "-s", "--size", type=int, nargs=2, help="desired frame size for image"
-    )
+    parser.add_argument("-s", "--size", type=int, nargs=2, help="desired frame size for image")
     parser.add_argument(
         "-r",
         "--recursive",
         action="store_true",
         help="convert video to images recursively",
     )
-    parser.add_argument(
-        "-n", "--nprocs", type=int, default=1, help="number of process"
-    )
+    parser.add_argument("-n", "--nprocs", type=int, default=1, help="number of process")
     opts = parser.parse_args()
     print(opts)
 

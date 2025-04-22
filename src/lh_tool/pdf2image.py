@@ -22,24 +22,16 @@ def pdf2image(pdf_file, image_file, zoom=1):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-i", "--input", type=str, help="input pdf file or path", required=True
-    )
-    parser.add_argument(
-        "-o", "--output", type=str, help="output image file or path"
-    )
-    parser.add_argument(
-        "-z", "--zoom", type=float, default=1, help="zoom image"
-    )
+    parser.add_argument("-i", "--input", type=str, help="input pdf file or path", required=True)
+    parser.add_argument("-o", "--output", type=str, help="output image file or path")
+    parser.add_argument("-z", "--zoom", type=float, default=1, help="zoom image")
     parser.add_argument(
         "-r",
         "--recursive",
         action="store_true",
         help="convert pdf to image files recursively",
     )
-    parser.add_argument(
-        "-n", "--nprocs", type=int, default=1, help="number of process"
-    )
+    parser.add_argument("-n", "--nprocs", type=int, default=1, help="number of process")
     opts = parser.parse_args()
     print(opts)
 
@@ -66,9 +58,7 @@ def main():
                     filename = os.path.splitext(filename)[0] + ".png"
                     output_file = os.path.join(output_path, filename)
                 else:
-                    output_file = (
-                            os.path.splitext(input_file)[0] + ".png"
-                    )
+                    output_file = os.path.splitext(input_file)[0] + ".png"
                 output_file_list.append(output_file)
         else:
             raise ValueError("Input path must be a file or directory.")

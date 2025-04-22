@@ -16,9 +16,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--pid", type=int, help="pid of waited process")
     parser.add_argument("-c", "--cmd", type=str, help="cmd to be executed")
-    parser.add_argument(
-        "-p", "--period", type=int, default=600, help="monitoring period"
-    )
+    parser.add_argument("-p", "--period", type=int, default=600, help="monitoring period")
     opts = parser.parse_args()
     print(opts)
 

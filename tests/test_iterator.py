@@ -76,49 +76,35 @@ class TestIterator(unittest.TestCase):
 
     def test_multi_process(self):
         """test multi process"""
-        result_list = MultiProcess(self.process, nprocs=10).run(
-            self.a, self.b, opt="+"
-        )
+        result_list = MultiProcess(self.process, nprocs=10).run(self.a, self.b, opt="+")
         self.assertEqual(result_list, self.res)
 
     def test_multi_thread(self):
         """test multi thread"""
-        result_list = MultiThread(self.process, nworkers=2).run(
-            self.a, self.b, opt="+"
-        )
+        result_list = MultiThread(self.process, nworkers=2).run(self.a, self.b, opt="+")
         self.assertEqual(result_list, self.res)
 
     def test_async_process(self):
         """test async process"""
-        result_list = AsyncProcess(self.async_process).run(
-            self.a, self.b, opt="+"
-        )
+        result_list = AsyncProcess(self.async_process).run(self.a, self.b, opt="+")
         self.assertEqual(result_list, self.res)
 
     def test_async_multi_process(self):
         """test async multi process"""
-        result_list = AsyncMultiProcess(self.async_process, nprocs=10).run(
-            self.a, self.b, opt="+"
-        )
+        result_list = AsyncMultiProcess(self.async_process, nprocs=10).run(self.a, self.b, opt="+")
         self.assertEqual(result_list, self.res)
 
     def test_parallel_process(self):
         """test parallel process"""
-        ret_list = ParallelProcess(self.process_batch, is_single_task_func=False).run(
-            self.a, self.b, opt="+"
-        )
+        ret_list = ParallelProcess(self.process_batch, is_single_task_func=False).run(self.a, self.b, opt="+")
         result_list = [_ for ret in ret_list for _ in ret]
         self.assertEqual(result_list, self.res)
 
-        result_list = ParallelProcess(self.process, is_single_task_func=True).run(
-            self.a, self.b, opt="+"
-        )
+        result_list = ParallelProcess(self.process, is_single_task_func=True).run(self.a, self.b, opt="+")
         self.assertEqual(result_list, self.res)
         exception = None
         try:
-            ret_list = ParallelProcess(self.process_batch, is_single_task_func=False).run(
-                self.a, self.b, "+"
-            )
+            ret_list = ParallelProcess(self.process_batch, is_single_task_func=False).run(self.a, self.b, "+")
         except Exception as e:
             exception = e
             print(e)

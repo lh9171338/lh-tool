@@ -39,21 +39,11 @@ def main():
     print(opts)
 
     if os.path.isdir(opts.input):
-        image_file_list = sorted(
-            glob.glob(os.path.join(opts.input, f"*.{opts.postfix}"))
-        )
-        pdf_file = (
-            os.path.abspath(opts.input) + ".pdf"
-            if opts.output is None
-            else opts.output
-        )
+        image_file_list = sorted(glob.glob(os.path.join(opts.input, f"*.{opts.postfix}")))
+        pdf_file = os.path.abspath(opts.input) + ".pdf" if opts.output is None else opts.output
     else:
         image_file_list = [opts.input]
-        pdf_file = (
-            os.path.splitext(opts.input)[0] + ".pdf"
-            if opts.output is None
-            else opts.output
-        )
+        pdf_file = os.path.splitext(opts.input)[0] + ".pdf" if opts.output is None else opts.output
 
     image2pdf(image_file_list, pdf_file)
 

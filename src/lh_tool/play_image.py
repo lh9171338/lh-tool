@@ -21,9 +21,7 @@ def play_image(image_file_list, fps):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-i", "--input", type=str, default=".", help="path of image files"
-    )
+    parser.add_argument("-i", "--input", type=str, default=".", help="path of image files")
     parser.add_argument(
         "-p",
         "--postfix",
@@ -31,16 +29,12 @@ def main():
         default="png",
         help="postfix of image filename",
     )
-    parser.add_argument(
-        "-f", "--fps", type=float, default=29.97, help="desired fps for video"
-    )
+    parser.add_argument("-f", "--fps", type=float, default=29.97, help="desired fps for video")
     opts = parser.parse_args()
     print(opts)
 
     fps = opts.fps
-    image_file_list = sorted(
-        glob.glob(os.path.join(opts.input, f"*.{opts.postfix}"))
-    )
+    image_file_list = sorted(glob.glob(os.path.join(opts.input, f"*.{opts.postfix}")))
     play_image(image_file_list, fps)
 
 

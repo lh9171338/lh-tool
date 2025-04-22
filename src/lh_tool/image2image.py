@@ -26,8 +26,7 @@ def main():
         "-o",
         "--output",
         type=str,
-        help="path of output image files. The default is the same as the "
-        "path of input image files",
+        help="path of output image files. The default is the same as the " "path of input image files",
     )
     parser.add_argument(
         "-p",
@@ -43,18 +42,14 @@ def main():
         default="jpg",
         help="desired postfix of image filename",
     )
-    parser.add_argument(
-        "-s", "--size", type=int, nargs=2, help="desired image size"
-    )
+    parser.add_argument("-s", "--size", type=int, nargs=2, help="desired image size")
     parser.add_argument(
         "-r",
         "--recursive",
         action="store_true",
         help="convert video to images recursively",
     )
-    parser.add_argument(
-        "-n", "--nprocs", type=int, default=1, help="number of process"
-    )
+    parser.add_argument("-n", "--nprocs", type=int, default=1, help="number of process")
     opts = parser.parse_args()
     print(opts)
 
@@ -72,9 +67,7 @@ def main():
                 recursive=True,
             )
         else:
-            input_file_list = glob.glob(
-                os.path.join(input_path, f"*.{input_postfix}")
-            )
+            input_file_list = glob.glob(os.path.join(input_path, f"*.{input_postfix}"))
         output_file_list = []
         for input_file in input_file_list:
             if output_path is not None:
@@ -82,9 +75,7 @@ def main():
                 filename = os.path.splitext(filename)[0] + f".{output_postfix}"
                 output_file = os.path.join(output_path, filename)
             else:
-                output_file = (
-                    os.path.splitext(input_file)[0] + f".{output_postfix}"
-                )
+                output_file = os.path.splitext(input_file)[0] + f".{output_postfix}"
             output_file_list.append(output_file)
 
         if nprocs == 1:

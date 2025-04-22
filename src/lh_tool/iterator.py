@@ -58,9 +58,7 @@ class Iterator:
                     self.total = len(value)
                     break
 
-        assert (
-            self.total is not None
-        ), "Can not infer the number of expected iterations"
+        assert self.total is not None, "Can not infer the number of expected iterations"
 
         # parse args
         self.dynamic_args = [[] for _ in range(self.total)]
@@ -88,18 +86,14 @@ class Iterator:
         self.static_kwargs = {}
         for key, value in kwargs.items():
             if isinstance(value, list):
-                assert (
-                    len(value) == self.total
-                ), f"{len(value)} != {self.total}"
+                assert len(value) == self.total, f"{len(value)} != {self.total}"
                 for i, val in enumerate(value):
                     self.dynamic_kwargs[i][key] = val
             else:
                 self.static_kwargs[key] = value
 
         # fix the static args
-        self.partial_func = functools.partial(
-            self.func, *self.static_args, **self.static_kwargs
-        )
+        self.partial_func = functools.partial(self.func, *self.static_args, **self.static_kwargs)
 
     def run(self, *args, **kwargs):
         """run"""
@@ -263,13 +257,8 @@ class AsyncProcess(Iterator):
             sem = asyncio.Semaphore(self.concurrency)
         else:
             sem = None
-        tasks = [
-            asyncio.create_task(self(sem, args))
-            for args in zip(self.dynamic_args, self.dynamic_kwargs)
-        ]
-        for f in tqdm.asyncio.tqdm.as_completed(
-            tasks, total=self.total, desc=self.func.__name__
-        ):
+        tasks = [asyncio.create_task(self(sem, args)) for args in zip(self.dynamic_args, self.dynamic_kwargs)]
+        for f in tqdm.asyncio.tqdm.as_completed(tasks, total=self.total, desc=self.func.__name__):
             await f
         self.ret_list = [task.result() for task in tasks]
 
@@ -325,18 +314,9 @@ class AsyncMultiProcess(Iterator):
 
     async def main(self):
         self.ret_list = []
-        async with aiomultiprocess.Pool(
-            self.nprocs, childconcurrency=self.concurrency
-        ) as p:
-            it = p.map(
-                self, zip(self.dynamic_args, self.dynamic_kwargs)
-            ).__aiter__()
-            self.ret_list = [
-                a
-                async for a in tqdm.asyncio.tqdm(
-                    it, total=self.total, desc=self.func.__name__
-                )
-            ]
+        async with aiomultiprocess.Pool(self.nprocs, childconcurrency=self.concurrency) as p:
+            it = p.map(self, zip(self.dynamic_args, self.dynamic_kwargs)).__aiter__()
+            self.ret_list = [a async for a in tqdm.asyncio.tqdm(it, total=self.total, desc=self.func.__name__)]
 
     def run(self, *args, **kwargs):
         """run - Please ensure that static arguments precede dynamic arguments"""
@@ -392,14 +372,9 @@ class MultiThread(Iterator):
 
         # run
         with ThreadPoolExecutor(max_workers=self.nworkers) as p:
-            tasks = [
-                p.submit(self, args)
-                for args in zip(self.dynamic_args, self.dynamic_kwargs)
-            ]
+            tasks = [p.submit(self, args) for args in zip(self.dynamic_args, self.dynamic_kwargs)]
         ret_list = []
-        for task in tqdm.tqdm(
-            tasks, total=self.total, desc=self.func.__name__
-        ):
+        for task in tqdm.tqdm(tasks, total=self.total, desc=self.func.__name__):
             ret_list.append(task.result())
 
         return ret_list
@@ -473,9 +448,7 @@ class ParallelProcess(Iterator):
                     self.total = len(value)
                     break
 
-        assert (
-            self.total is not None
-        ), "Can not infer the number of expected iterations"
+        assert self.total is not None, "Can not infer the number of expected iterations"
 
         # split tasks
         indices = np.linspace(0, self.total, self.nprocs + 1).astype("int32")
@@ -494,9 +467,7 @@ class ParallelProcess(Iterator):
                         self.dynamic_args[i].append(arg[i])
                 else:
                     for i in range(self.nprocs):
-                        self.dynamic_args[i].append(
-                            arg[indices[i] : indices[i + 1]]
-                        )
+                        self.dynamic_args[i].append(arg[indices[i] : indices[i + 1]])
                 dynamic_arg_flags.append(True)
             else:
                 self.static_args.append(arg)
@@ -522,16 +493,12 @@ class ParallelProcess(Iterator):
                         self.dynamic_kwargs[i][key] = value[i]
                 else:
                     for i in range(self.nprocs):
-                        self.dynamic_kwargs[i][key] = value[
-                            indices[i] : indices[i + 1]
-                        ]
+                        self.dynamic_kwargs[i][key] = value[indices[i] : indices[i + 1]]
             else:
                 self.static_kwargs[key] = value
 
         # fix the static args
-        self.partial_func = functools.partial(
-            self.func, *self.static_args, **self.static_kwargs
-        )
+        self.partial_func = functools.partial(self.func, *self.static_args, **self.static_kwargs)
 
     def __call__(self, dynamic_args, dynamic_kwargs, results_dict, idx):
         res = self.partial_func(*dynamic_args, **dynamic_kwargs)

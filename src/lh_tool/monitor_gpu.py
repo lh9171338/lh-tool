@@ -66,9 +66,7 @@ class GPUPeakMemoryMonitor:
             gpu_ids = list(range(torch.cuda.device_count()))
         elif isinstance(gpu_ids, int):
             gpu_ids = [gpu_ids]
-        assert isinstance(
-            gpu_ids, list
-        ), f"`gpu_ids` must be a list, but got {type(gpu_ids)}"
+        assert isinstance(gpu_ids, list), f"`gpu_ids` must be a list, but got {type(gpu_ids)}"
         assert len(gpu_ids), "`gpu_ids` cannot be empty"
 
         self._context = context
@@ -84,10 +82,7 @@ class GPUPeakMemoryMonitor:
     def _monitor(self):
         """monitor"""
         pynvml.nvmlInit()
-        handles = [
-            pynvml.nvmlDeviceGetHandleByIndex(gpu_id)
-            for gpu_id in self._gpu_ids
-        ]
+        handles = [pynvml.nvmlDeviceGetHandleByIndex(gpu_id) for gpu_id in self._gpu_ids]
 
         try:
             while not self._stop_event.is_set():
@@ -119,9 +114,7 @@ class GPUPeakMemoryMonitor:
         peak_memories = self.peak_memories
         if self._print_func is not None:
             if self._context:
-                self._print_func(
-                    f"{self._context} peak memory usage: {peak_memories}"
-                )
+                self._print_func(f"{self._context} peak memory usage: {peak_memories}")
             else:
                 self._print_func(f"peak memory usage: {peak_memories}")
         return peak_memories
@@ -203,17 +196,10 @@ def monitor(args):
             if low_utilization_start_time is None:
                 low_utilization_start_time = cur_time
             else:
-                logging.info(
-                    f"low utilization detected: {cur_time - low_utilization_start_time}s"
-                )
-                if (
-                    cur_time - low_utilization_start_time
-                    >= args.time_threshold
-                ):
+                logging.info(f"low utilization detected: {cur_time - low_utilization_start_time}s")
+                if cur_time - low_utilization_start_time >= args.time_threshold:
                     trigger = True
-                    logging.warning(
-                        f"low utilization detected, utilization: {utilizations}"
-                    )
+                    logging.warning(f"low utilization detected, utilization: {utilizations}")
         else:
             low_utilization_start_time = None
 
@@ -221,17 +207,10 @@ def monitor(args):
             if constant_utilization_start_time is None:
                 constant_utilization_start_time = cur_time
             else:
-                logging.info(
-                    f"constant utilization detected: {cur_time - constant_utilization_start_time}s"
-                )
-                if (
-                    cur_time - constant_utilization_start_time
-                    >= args.time_threshold
-                ):
+                logging.info(f"constant utilization detected: {cur_time - constant_utilization_start_time}s")
+                if cur_time - constant_utilization_start_time >= args.time_threshold:
                     trigger = True
-                    logging.warning(
-                        f"constant utilization detected, utilization: {utilizations}"
-                    )
+                    logging.warning(f"constant utilization detected, utilization: {utilizations}")
         else:
             constant_utilization_start_time = None
         last_utilizations = utilizations

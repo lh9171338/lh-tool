@@ -30,15 +30,12 @@ def main():
             rename_file -i input -e "lambda x: x.replace('.png', '.jpg')"
     """
     parser = argparse.ArgumentParser(usage=example)
-    parser.add_argument(
-        "-i", "--input", type=str, default=".", help="path of input files"
-    )
+    parser.add_argument("-i", "--input", type=str, default=".", help="path of input files")
     parser.add_argument(
         "-o",
         "--output",
         type=str,
-        help="path of output files. The default is the same as the "
-        "path of input files",
+        help="path of output files. The default is the same as the " "path of input files",
     )
     parser.add_argument(
         "-e",
@@ -47,12 +44,8 @@ def main():
         required=True,
         help="rename lambda expression",
     )
-    parser.add_argument(
-        "-r", "--recursive", action="store_true", help="rename recursively"
-    )
-    parser.add_argument(
-        "-n", "--nprocs", type=int, default=1, help="number of process"
-    )
+    parser.add_argument("-r", "--recursive", action="store_true", help="rename recursively")
+    parser.add_argument("-n", "--nprocs", type=int, default=1, help="number of process")
 
     opts = parser.parse_args()
     print(opts)
@@ -84,9 +77,7 @@ def main():
 
         assert len(output_file_list) == len(
             set(output_file_list)
-        ), "output file list is not unique, please check your expression: {}".format(
-            expression
-        )
+        ), "output file list is not unique, please check your expression: {}".format(expression)
 
         process = MultiProcess if nprocs > 1 else SingleProcess
         process(rename, nprocs=nprocs).run(input_file_list, output_file_list)

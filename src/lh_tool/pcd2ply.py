@@ -37,9 +37,9 @@ def get_class_colors(num_classes):
 
 
 def pcd2ply(
-        pcd_file,
-        ply_file,
-        with_label=False,
+    pcd_file,
+    ply_file,
+    with_label=False,
 ):
     """
     Convert pcd file to ply file
@@ -60,7 +60,7 @@ def pcd2ply(
             pc_data["y"],
             pc_data["z"],
         ],
-        axis=-1
+        axis=-1,
     )
     if with_label and "label" in pc.fields:
         labels = pc_data["label"]
@@ -91,8 +91,7 @@ def main():
         "-o",
         "--output",
         type=str,
-        help="path of output ply files. The default is the same as the "
-             "path of input pcd files",
+        help="path of output ply files. The default is the same as the " "path of input pcd files",
     )
     parser.add_argument(
         "-l",
@@ -107,9 +106,7 @@ def main():
         action="store_true",
         help="convert pcd to ply files recursively",
     )
-    parser.add_argument(
-        "-n", "--nprocs", type=int, default=1, help="number of process"
-    )
+    parser.add_argument("-n", "--nprocs", type=int, default=1, help="number of process")
     opts = parser.parse_args()
     print(opts)
 
@@ -136,9 +133,7 @@ def main():
                     filename = os.path.splitext(filename)[0] + ".ply"
                     output_file = os.path.join(output_path, filename)
                 else:
-                    output_file = (
-                            os.path.splitext(input_file)[0] + ".ply"
-                    )
+                    output_file = os.path.splitext(input_file)[0] + ".ply"
                 output_file_list.append(output_file)
         else:
             raise ValueError("Input path must be a file or directory.")

@@ -67,9 +67,7 @@ class Email:
                 with open(filename, "rb") as f:
                     _, extension = os.path.splitext(filename)
                     mime = MIMEBase(extension, extension, filename=filename)
-                    mime.add_header(
-                        "Content-Disposition", "attachment", filename=filename
-                    )
+                    mime.add_header("Content-Disposition", "attachment", filename=filename)
                     mime.add_header("Content-ID", "<0>")
                     mime.add_header("X-Attachment-Id", "0")
                     mime.set_payload(f.read())
