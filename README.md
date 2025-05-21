@@ -53,9 +53,7 @@ git clone https://github.com/lh9171338/lh-tool.git
 
 cd lh-tool
 
-python -m build
-
-pip install dist/lh_tool-1.12.1-py3-none-any.whl
+python -m pip install .
 ```
 
 * Install from the Python Package Index (PyPI)

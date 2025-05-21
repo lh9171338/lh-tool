@@ -16,6 +16,7 @@ import asyncio
 import aiomultiprocess
 import numpy as np
 import time
+import inspect
 
 
 class Iterator:
@@ -131,32 +132,29 @@ class SingleProcess(Iterator):
 
     def run(self, *args, **kwargs):
         """run - Please ensure that static arguments precede dynamic arguments"""
-
-        # parse
-        self.parse(*args, **kwargs)
-
-        # run
         ret_list = []
-        for args, kwargs in tqdm.tqdm(
-            zip(self.dynamic_args, self.dynamic_kwargs),
-            total=self.total,
-            desc=self.func.__name__,
-        ):
-            ret_list.append(self.partial_func(*args, **kwargs))
-        return ret_list
+        if "_counter" in kwargs:
+            _counter = kwargs.pop("_counter")
 
-    def _run(self, _counter: multiprocessing.Value, *args, **kwargs):
-        """run - Please ensure that static arguments precede dynamic arguments"""
+            # parse
+            self.parse(*args, **kwargs)
 
-        # parse
-        self.parse(*args, **kwargs)
+            # run
+            for args, kwargs in zip(self.dynamic_args, self.dynamic_kwargs):
+                ret_list.append(self.partial_func(*args, **kwargs))
+                with _counter.get_lock():
+                    _counter.value += 1
+        else:
+            # parse
+            self.parse(*args, **kwargs)
 
-        # run
-        ret_list = []
-        for args, kwargs in zip(self.dynamic_args, self.dynamic_kwargs):
-            ret_list.append(self.partial_func(*args, **kwargs))
-            with _counter.get_lock():
-                _counter.value += 1
+            # run
+            for args, kwargs in tqdm.tqdm(
+                zip(self.dynamic_args, self.dynamic_kwargs),
+                total=self.total,
+                desc=self.func.__name__,
+            ):
+                ret_list.append(self.partial_func(*args, **kwargs))
         return ret_list
 
 
@@ -408,6 +406,21 @@ class ParallelProcess(Iterator):
         print(res)
         # [[4, 6], [8, 10]]
 
+        # use `_counter` argument to display progress bar
+        def add(arr1, arr2, _counter=None):
+            res = []
+            for a, b in zip(arr1, arr2):
+                res.append(a + b)
+                with _counter.get_lock():
+                    _counter.value += 1
+            return res
+
+        a = [1, 2, 3, 4]
+        b = [3, 4, 5, 6]
+        res = ParallelProcess(add, nprocs=2).run(a, b)
+        print(res)
+        # [[4, 6], [8, 10]]
+
         # For single-task function
         def add(a, b):
             return a + b
@@ -430,7 +443,7 @@ class ParallelProcess(Iterator):
         **kwargs,
     ):
         if is_single_task_func:
-            func = SingleProcess(func)._run
+            func = SingleProcess(func).run
         super().__init__(func, total)
 
         self.nprocs = nprocs if nprocs > 0 else multiprocessing.cpu_count()
@@ -520,14 +533,21 @@ class ParallelProcess(Iterator):
         procs = []
         manager = multiprocessing.Manager()
         results_dict = manager.dict()
-        if self.is_single_task_func:
+
+        # check if function has `_counter` args
+        has_counter = False
+        if not self.is_single_task_func:
+            params = inspect.signature(self.func).parameters
+            has_counter = "_counter" in params
+
+        if self.is_single_task_func or has_counter:
             counter = multiprocessing.Value("i", 0)
             for i in range(self.nprocs):
                 p = multiprocessing.Process(
                     target=self,
                     args=(
-                        [counter] + self.dynamic_args[i],
-                        self.dynamic_kwargs[i],
+                        self.dynamic_args[i],
+                        {**self.dynamic_kwargs[i], "_counter": counter},
                         results_dict,
                         i,
                     ),
@@ -549,7 +569,8 @@ class ParallelProcess(Iterator):
 
             ret_list = [results_dict[idx] for idx in range(self.nprocs)]
             # flatten the ret_list from 2d to 1d
-            ret_list = [_ for sub_ret_list in ret_list for _ in sub_ret_list]
+            if self.is_single_task_func:
+                ret_list = [_ for sub_ret_list in ret_list for _ in sub_ret_list]
         else:
             for i in range(self.nprocs):
                 p = multiprocessing.Process(

@@ -54,6 +54,21 @@ class TestIterator(unittest.TestCase):
         return res_list
 
     @staticmethod
+    def process_batch_v2(a_list, b_list, opt="+", _counter=None):
+        """process batch"""
+        res_list = []
+        for a, b in zip(a_list, b_list):
+            if opt == "+":
+                res = a + b
+            else:
+                res = a - b
+            res_list.append(res)
+            if _counter is not None:
+                with _counter.get_lock():
+                    _counter.value += 1
+        return res_list
+
+    @staticmethod
     async def async_process(a, b, opt="+"):
         """async process"""
         await asyncio.sleep(1)
@@ -97,6 +112,10 @@ class TestIterator(unittest.TestCase):
     def test_parallel_process(self):
         """test parallel process"""
         ret_list = ParallelProcess(self.process_batch, is_single_task_func=False).run(self.a, self.b, opt="+")
+        result_list = [_ for ret in ret_list for _ in ret]
+        self.assertEqual(result_list, self.res)
+
+        ret_list = ParallelProcess(self.process_batch_v2, is_single_task_func=False).run(self.a, self.b, opt="+")
         result_list = [_ for ret in ret_list for _ in ret]
         self.assertEqual(result_list, self.res)
 
