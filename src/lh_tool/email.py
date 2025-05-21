@@ -26,8 +26,9 @@ class Email:
         cfg (dict): config
 
     Example:
-        .. code-block:: python
+        ```python
         Email(cfg).send()
+        ```
     """
 
     def __init__(self, cfg):
@@ -94,9 +95,11 @@ class CustomEmail(Email):
         to_addr (str): to address
         subject (str): subject
         content (str): content
+
     Example:
-        .. code-block:: python
+        ```python
         CustomEmail(from_name, from_addr, password, to_name, to_addr, subject, content).send()
+        ```
     """
 
     def __init__(

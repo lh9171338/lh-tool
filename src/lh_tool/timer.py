@@ -25,8 +25,7 @@ class Timer:
         kwargs (Optinal): callback kwargs
 
     Example:
-        .. code-block:: python
-
+        ```python
         start_time = time.time()
 
         def callback():
@@ -37,6 +36,7 @@ class Timer:
         timer.start()
         time.sleep(1)
         timer.stop()
+        ```
     """
 
     def __init__(

@@ -21,8 +21,7 @@ class TimeConsumptionDecorator:
         print_func (callable): The print function used to print the time consumption, default is `print`
 
     Example:
-        .. code-block:: python
-
+        ```python
         @TimeConsumptionDecorator()
         def test1():
             time.sleep(1)
@@ -36,6 +35,7 @@ class TimeConsumptionDecorator:
             time.sleep(1)
 
         test2()
+        ```
     """
 
     def __init__(self, print_func: Callable = print):
@@ -64,8 +64,7 @@ class TimeConsumptionContextManager:
         print_func (callable): The print function used to print the time consumption, default is `print`
 
     Example:
-        .. code-block:: python
-
+        ```python
         import logging
         with TimeConsumptionContextManager('block1'):
             time.sleep(1)
@@ -73,7 +72,7 @@ class TimeConsumptionContextManager:
         # using logging to print
         with TimeConsumptionContextManager('block2', logging.error):
             time.sleep(1)
-
+        ```
     """
 
     def __init__(self, context: str = "", print_func: Callable = print):
@@ -102,8 +101,7 @@ class TimeConsumption:
         format_func (Optional[Callable]): The format function used to format the output string, default is None
 
     Example:
-        .. code-block:: python
-
+        ```python
         # used as decorator
         @TimeConsumption()
         def test():
@@ -114,6 +112,7 @@ class TimeConsumption:
         # used as context manager
         with TimeConsumption("block"):
             time.sleep(1)
+        ```
     """
 
     def __init__(
@@ -169,8 +168,7 @@ def time_consumption(
         print_func (callable): The print function used to print the time consumption, default is `print`
         format_func (Optional[Callable]): The format function used to format the output string, default is None
     Example:
-        .. code-block:: python
-
+        ```python
         # used as decorator
         @time_consumption()
         def test():
@@ -181,5 +179,6 @@ def time_consumption(
         # used as context manager
         with time_consumption("block"):
             time.sleep(1)
+        ```
     """
     return TimeConsumption(context=context, print_func=print_func, format_func=format_func)

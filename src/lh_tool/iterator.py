@@ -109,7 +109,7 @@ class SingleProcess(Iterator):
         total (int, optional): number of iterations
 
     Example:
-        .. code-block:: python
+        ```python
         def add(a, b):
             return a + b
 
@@ -118,6 +118,7 @@ class SingleProcess(Iterator):
         res = SingleProcess(add).run(a, b)
         print(res)
         # [4, 6]
+        ```
     """
 
     def __init__(
@@ -169,7 +170,7 @@ class MultiProcess(Iterator):
         nprocs (int, optional): number of processes, default is `multiprocessing.cpu_count()`
 
     Example:
-        .. code-block:: python
+        ```python
         def add(a, b):
             return a + b
 
@@ -178,6 +179,7 @@ class MultiProcess(Iterator):
         res = MultiProcess(add).run(a, b)
         print(res)
         # [4, 6]
+        ```
     """
 
     def __init__(
@@ -222,7 +224,7 @@ class AsyncProcess(Iterator):
         concurrency (int, optional): concurrent, default is 0
 
     Example:
-        .. code-block:: python
+        ```python
         async def add(a, b):
             await asyncio.sleep(1)
             return a + b
@@ -232,6 +234,7 @@ class AsyncProcess(Iterator):
         res = AsyncProcess(add).run(a, b)
         print(res)
         # [4, 6]
+        ```
     """
 
     def __init__(
@@ -284,7 +287,7 @@ class AsyncMultiProcess(Iterator):
         nprocs (int, optional): number of processes, default is `multiprocessing.cpu_count()`
 
     Example:
-        .. code-block:: python
+        ```python
         async def add(a, b):
             await asyncio.sleep(1)
             return a + b
@@ -294,6 +297,7 @@ class AsyncMultiProcess(Iterator):
         res = AsyncMultiProcess(add).run(a, b)
         print(res)
         # [4, 6]
+        ```
     """
 
     def __init__(
@@ -339,7 +343,7 @@ class MultiThread(Iterator):
         nworkers (int, optional): number of workers, default is 2
 
     Example:
-        .. code-block:: python
+        ```python
         def add(a, b):
             return a + b
 
@@ -348,6 +352,7 @@ class MultiThread(Iterator):
         res = MultiThread(add).run(a, b)
         print(res)
         # [4, 6]
+        ```
     """
 
     def __init__(
@@ -392,7 +397,7 @@ class ParallelProcess(Iterator):
         pbar_refresh_interval (float, optional): interval of progress bar refreshing, default is 1.0s
 
     Example:
-        .. code-block:: python
+        ```python
         # For multi-task function
         def add(arr1, arr2):
             return [a + b for a, b in zip(arr1, arr2)]
@@ -412,6 +417,7 @@ class ParallelProcess(Iterator):
         res = ParallelProcess(add, nprocs=2, is_single_task_func=True).run(a, b)
         print(res)
         # [4, 6, 8, 10]
+        ```
     """
 
     def __init__(

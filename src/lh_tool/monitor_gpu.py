@@ -31,8 +31,7 @@ class GPUPeakMemoryMonitor:
         print_func (Optional[Callable]): The function used to print the output message, default is `print`
 
     Example:
-        .. code-block:: python
-
+        ```python
         monitor = GPUPeakMemoryMonitor("block", gpu_ids=0)
         # disable print
         # monitor = GPUPeakMemoryMonitor("block", gpu_ids=0, print_func=None)
@@ -50,6 +49,7 @@ class GPUPeakMemoryMonitor:
             # to do something
 
         test()
+        ```
     """
 
     def __init__(
