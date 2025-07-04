@@ -61,9 +61,9 @@ class GPUPeakMemoryMonitor:
         print_func: Optional[Callable] = print,
     ):
         if gpu_ids is None:
-            import torch
-
-            gpu_ids = list(range(torch.cuda.device_count()))
+            pynvml.nvmlInit()
+            gpu_ids = list(range(pynvml.nvmlDeviceGetCount()))
+            pynvml.nvmlShutdown()
         elif isinstance(gpu_ids, int):
             gpu_ids = [gpu_ids]
         assert isinstance(gpu_ids, list), f"`gpu_ids` must be a list, but got {type(gpu_ids)}"

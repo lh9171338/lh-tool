@@ -25,7 +25,7 @@ class Iterator:
 
     Parameters:
         func (callable): function to be iterated
-        total (int, optional): number of iterations
+        total (int, optional): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
     """
 
     def __init__(
@@ -107,7 +107,7 @@ class SingleProcess(Iterator):
 
     Parameters:
         func (callable): function to be iterated
-        total (int, optional): number of iterations
+        total (int, optional): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
 
     Example:
         ```python
@@ -131,7 +131,11 @@ class SingleProcess(Iterator):
         super().__init__(func, total)
 
     def run(self, *args, **kwargs):
-        """run - Please ensure that static arguments precede dynamic arguments"""
+        """
+        run
+            - Please ensure that static arguments precede dynamic arguments
+            - If the `total` is not specified, it will be inferred from the first list-type parameter
+        """
         ret_list = []
         if "_counter" in kwargs:
             _counter = kwargs.pop("_counter")
@@ -164,7 +168,7 @@ class MultiProcess(Iterator):
 
     Parameters:
         func (callable): function to be iterated
-        total (int, optional): number of iterations
+        total (int, optional): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
         nprocs (int, optional): number of processes, default is `multiprocessing.cpu_count()`
 
     Example:
@@ -195,8 +199,11 @@ class MultiProcess(Iterator):
         return self.partial_func(*args[0], **args[1])
 
     def run(self, *args, **kwargs):
-        """run - Please ensure that static arguments precede dynamic arguments"""
-
+        """
+        run
+            - Please ensure that static arguments precede dynamic arguments
+            - If the `total` is not specified, it will be inferred from the first list-type parameter
+        """
         # parse
         self.parse(*args, **kwargs)
 
@@ -218,7 +225,7 @@ class AsyncProcess(Iterator):
 
     Parameters:
         func (callable): function to be iterated
-        total (int, optional): number of iterations
+        total (int, optional): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
         concurrency (int, optional): concurrent, default is 0
 
     Example:
@@ -264,8 +271,11 @@ class AsyncProcess(Iterator):
         self.ret_list = [task.result() for task in tasks]
 
     def run(self, *args, **kwargs):
-        """run - Please ensure that static arguments precede dynamic arguments"""
-
+        """
+        run
+            - Please ensure that static arguments precede dynamic arguments
+            - If the `total` is not specified, it will be inferred from the first list-type parameter
+        """
         # parse
         self.parse(*args, **kwargs)
 
@@ -280,7 +290,7 @@ class AsyncMultiProcess(Iterator):
 
     Parameters:
         func (callable): function to be iterated
-        total (int, optional): number of iterations
+        total (int, optional): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
         concurrency (int, optional): concurrent, default is 16
         nprocs (int, optional): number of processes, default is `multiprocessing.cpu_count()`
 
@@ -337,7 +347,7 @@ class MultiThread(Iterator):
 
     Parameters:
         func (callable): function to be iterated
-        total (int, optional): number of iterations
+        total (int, optional): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
         nworkers (int, optional): number of workers, default is 2
 
     Example:
@@ -368,8 +378,11 @@ class MultiThread(Iterator):
         return self.partial_func(*args[0], **args[1])
 
     def run(self, *args, **kwargs):
-        """run - Please ensure that static arguments precede dynamic arguments"""
-
+        """
+        run
+            - Please ensure that static arguments precede dynamic arguments
+            - If the `total` is not specified, it will be inferred from the first list-type parameter
+        """
         # parse
         self.parse(*args, **kwargs)
 
@@ -389,7 +402,7 @@ class ParallelProcess(Iterator):
 
     Parameters:
         func (callable): function to be iterated
-        total (int, optional): number of iterations
+        total (int, optional): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
         nprocs (int, optional): number of processes, default is `multiprocessing.cpu_count()`
         is_single_task_func (bool, optional): whether the function is single task, default is True (when version >= 1.11.1)
         pbar_refresh_interval (float, optional): interval of progress bar refreshing, default is 1.0s
@@ -402,7 +415,7 @@ class ParallelProcess(Iterator):
 
         a = [1, 2, 3, 4]
         b = [3, 4, 5, 6]
-        res = ParallelProcess(add, nprocs=2).run(a, b)
+        res = ParallelProcess(add, nprocs=2, is_single_task_func=False).run(a, b)
         print(res)
         # [[4, 6], [8, 10]]
 
@@ -417,7 +430,7 @@ class ParallelProcess(Iterator):
 
         a = [1, 2, 3, 4]
         b = [3, 4, 5, 6]
-        res = ParallelProcess(add, nprocs=2).run(a, b)
+        res = ParallelProcess(add, nprocs=2, is_single_task_func=False).run(a, b)
         print(res)
         # [[4, 6], [8, 10]]
 
@@ -524,8 +537,11 @@ class ParallelProcess(Iterator):
         results_dict[idx] = res
 
     def run(self, *args, **kwargs):
-        """run - Please ensure that static arguments precede dynamic arguments"""
-
+        """
+        run
+            - Please ensure that static arguments precede dynamic arguments
+            - If the `total` is not specified, it will be inferred from the first list-type parameter
+        """
         # parse
         self.parse(*args, **kwargs)
 
