@@ -99,6 +99,7 @@ class TimeConsumption:
         context (str): The context used to print the time consumption, default is ''
         print_func (callable): The print function used to print the time consumption, default is `print`
         format_func (Optional[Callable]): The format function used to format the output string, default is None
+        sync (bool): Whether to synchronize the cuda before and after the execution of the code block, default is False
 
     Example:
         ```python
@@ -112,6 +113,12 @@ class TimeConsumption:
         # used as context manager
         with TimeConsumption("block"):
             time.sleep(1)
+
+        # for pytorch code block
+        with TimeConsumption("block", sync=True):
+            x = torch.randn((1000, 1000)).to("cuda")
+            y = torch.randn((1000, 1000)).to("cuda")
+            z = x + y
         ```
     """
 
@@ -120,17 +127,27 @@ class TimeConsumption:
         context: str = "",
         print_func: Callable = print,
         format_func: Optional[Callable] = None,
+        sync: bool = False,
     ):
         self._context = context
         self._print_func = print_func
         self._format_func = format_func
+        self._sync = sync
+        if self._sync:
+            from torch.cuda import synchronize
+
+            self._synchronize = synchronize
+        else:
+            self._synchronize = lambda: None
 
     def __call__(self, func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             """wrapper"""
             start_time = time.time()
+            self._synchronize()
             ret = func(*args, **kwargs)
+            self._synchronize()
             delta_time = time.time() - start_time
             if self._format_func is not None:
                 delta_time = self._format_func(delta_time)
@@ -143,9 +160,11 @@ class TimeConsumption:
 
     def __enter__(self):
         self.start_time = time.time()
+        self._synchronize()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self._synchronize()
         delta_time = time.time() - self.start_time
         if self._format_func is not None:
             delta_time = self._format_func(delta_time)
@@ -159,6 +178,7 @@ def time_consumption(
     context: str = "",
     print_func: Callable = print,
     format_func: Optional[Callable] = None,
+    sync: bool = False,
 ):
     """
     `time_consumption` used to print the module time consumption
@@ -167,6 +187,7 @@ def time_consumption(
         context (str): The context used to print the time consumption, default is ''
         print_func (callable): The print function used to print the time consumption, default is `print`
         format_func (Optional[Callable]): The format function used to format the output string, default is None
+        sync (bool): Whether to synchronize the cuda before and after the execution of the code block, default is False
     Example:
         ```python
         # used as decorator
@@ -179,6 +200,12 @@ def time_consumption(
         # used as context manager
         with time_consumption("block"):
             time.sleep(1)
+
+        # for pytorch code block
+        with time_consumption("block", sync=True):
+            x = torch.randn((1000, 1000)).to("cuda")
+            y = torch.randn((1000, 1000)).to("cuda")
+            z = x + y
         ```
     """
-    return TimeConsumption(context=context, print_func=print_func, format_func=format_func)
+    return TimeConsumption(context=context, print_func=print_func, format_func=format_func, sync=sync)
