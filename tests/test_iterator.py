@@ -16,6 +16,7 @@ sys.path.append("../src")
 from lh_tool.iterator import (
     SingleProcess,
     MultiProcess,
+    BoundedMultiProcess,
     MultiThread,
     AsyncProcess,
     AsyncMultiProcess,
@@ -24,7 +25,7 @@ from lh_tool.iterator import (
 
 
 class TestIterator(unittest.TestCase):
-    """TestIterator"""
+    """Test Iterator"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -36,6 +37,15 @@ class TestIterator(unittest.TestCase):
     @staticmethod
     def process(a, b, opt="+"):
         """process"""
+        if opt == "+":
+            return a + b
+        else:
+            return a - b
+
+    @staticmethod
+    def bounded_process(a, b, opt="+", port=8000):
+        """resource slot process"""
+        print(f"{port}: {a} {opt} {b}")
         if opt == "+":
             return a + b
         else:
@@ -92,6 +102,13 @@ class TestIterator(unittest.TestCase):
     def test_multi_process(self):
         """test multi process"""
         result_list = MultiProcess(self.process, nprocs=10).run(self.a, self.b, opt="+")
+        self.assertEqual(result_list, self.res)
+
+    def test_bounded_multi_process(self):
+        """test resource slot multi process"""
+        result_list = BoundedMultiProcess(self.bounded_process, nprocs=2).run(
+            self.a, self.b, opt="+", port=[8000, 8001]
+        )
         self.assertEqual(result_list, self.res)
 
     def test_multi_thread(self):

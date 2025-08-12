@@ -17,6 +17,7 @@ import aiomultiprocess
 import numpy as np
 import time
 import inspect
+from typing import Callable, Optional, List, Tuple, Any
 
 
 class Iterator:
@@ -30,8 +31,8 @@ class Iterator:
 
     def __init__(
         self,
-        func,
-        total=None,
+        func: Callable,
+        total: Optional[int] = None,
         **kwargs,
     ):
         self.func = func
@@ -44,7 +45,6 @@ class Iterator:
 
     def parse(self, *args, **kwargs):
         """parse"""
-
         # infer the number of expected iterations from args
         if self.total is None:
             for arg in args:
@@ -124,11 +124,11 @@ class SingleProcess(Iterator):
 
     def __init__(
         self,
-        func,
-        total=None,
+        func: Callable,
+        total: Optional[int] = None,
         **kwargs,
     ):
-        super().__init__(func, total)
+        super().__init__(func=func, total=total)
 
     def run(self, *args, **kwargs):
         """
@@ -164,7 +164,7 @@ class SingleProcess(Iterator):
 
 class MultiProcess(Iterator):
     """
-    MultiProcess
+    Multi-Process
 
     Parameters:
         func (callable): function to be iterated
@@ -186,17 +186,141 @@ class MultiProcess(Iterator):
 
     def __init__(
         self,
-        func,
-        total=None,
-        nprocs=multiprocessing.cpu_count(),
+        func: Callable,
+        total: Optional[int] = None,
+        nprocs: int = multiprocessing.cpu_count(),
         **kwargs,
     ):
-        super().__init__(func, total)
+        super().__init__(func=func, total=total)
 
         self.nprocs = nprocs if nprocs > 0 else multiprocessing.cpu_count()
 
     def __call__(self, args):
         return self.partial_func(*args[0], **args[1])
+
+    def run(self, *args, **kwargs):
+        """
+        run
+            - Please ensure that static arguments precede dynamic arguments
+            - If the `total` is not specified, it will be inferred from the first list-type parameter
+        """
+        # parse
+        self.parse(*args, **kwargs)
+
+        # run
+        with multiprocessing.Pool(self.nprocs) as p:
+            ret_list = list(
+                tqdm.tqdm(
+                    p.imap(self, zip(self.dynamic_args, self.dynamic_kwargs)),
+                    total=self.total,
+                    desc=self.func.__name__,
+                )
+            )
+        return ret_list
+
+
+class BoundedMultiProcess(Iterator):
+    """
+    Bounded Multi-Process
+
+    A utility to run a function in parallel using multiple processes,
+    with support for per-process resource binding (e.g., GPU ID, port).
+    Make sure the number of resources equals the number of processes.
+
+    Parameters:
+        func (callable): function to be iterated
+        total (int, optional): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
+        nprocs (int, optional): number of processes, default is `multiprocessing.cpu_count()`
+
+    Example:
+        ```python
+        def add(a, b, port):
+            print(f"{port}: {a} + {b}")
+            return a + b
+
+        a = [1, 2, 3, 4]
+        b = [5, 6, 7, 8]
+        # length of `port` must be equal to `nprocs`
+        res = MultiProcess(add, nprocs=2).run(a, b, port=[8000, 8001])
+        print(res)
+        # [6, 8, 10, 12]
+        ```
+    """
+
+    def __init__(
+        self,
+        func: Callable,
+        total: Optional[int] = None,
+        nprocs: int = multiprocessing.cpu_count(),
+        **kwargs,
+    ):
+        super().__init__(func=func, total=total)
+
+        self.nprocs = nprocs if nprocs > 0 else multiprocessing.cpu_count()
+
+    def parse(self, *args, **kwargs):
+        """parse"""
+        # infer the number of expected iterations from args
+        if self.total is None:
+            for arg in args:
+                if isinstance(arg, list):
+                    self.total = len(arg)
+                    break
+
+        # infer the number of expected iterations from kwargs
+        if self.total is None:
+            for _, value in kwargs.items():
+                if isinstance(value, list):
+                    self.total = len(value)
+                    break
+
+        assert self.total is not None, "Can not infer the number of expected iterations"
+
+        # parse args
+        self.dynamic_args = [[] for _ in range(self.total)]
+        self.static_args = []
+        dynamic_arg_flags = []
+        for arg in args:
+            if isinstance(arg, list):
+                assert len(arg) == self.total, f"{len(arg)} != {self.total}"
+                for i, val in enumerate(arg):
+                    self.dynamic_args[i].append(val)
+                dynamic_arg_flags.append(True)
+            else:
+                self.static_args.append(arg)
+                dynamic_arg_flags.append(False)
+
+        # Assert static arguments precede dynamic arguments
+        if len(dynamic_arg_flags) > 1:
+            dynamic_arg_flags = np.array(dynamic_arg_flags)
+            if (dynamic_arg_flags[:-1] > dynamic_arg_flags[1:]).any():
+                msg = ["dynamic" if flag else "static" for flag in dynamic_arg_flags]
+                raise RuntimeError(f"dynamic arguments precede static arguments: {msg}")
+
+        # parse kwargs
+        self.process_kwargs = [{} for _ in range(self.nprocs)]
+        self.dynamic_kwargs = [{} for _ in range(self.total)]
+        self.static_kwargs = {}
+        for key, value in kwargs.items():
+            if isinstance(value, list):
+                if len(value) == self.nprocs:
+                    for i, val in enumerate(value):
+                        self.process_kwargs[i][key] = val
+                else:
+                    assert len(value) == self.total, f"{len(value)} != {self.total}"
+                    for i, val in enumerate(value):
+                        self.dynamic_kwargs[i][key] = val
+            else:
+                self.static_kwargs[key] = value
+
+        # fix the static args
+        self.partial_func = functools.partial(self.func, *self.static_args, **self.static_kwargs)
+
+    def __call__(self, args):
+        # Get process index
+        proc_name = multiprocessing.current_process().name
+        proc_idx = int(proc_name.split("-")[-1]) - 1
+        return self.partial_func(*args[0], **args[1], **self.process_kwargs[proc_idx])
 
     def run(self, *args, **kwargs):
         """
@@ -244,12 +368,12 @@ class AsyncProcess(Iterator):
 
     def __init__(
         self,
-        func,
-        total=None,
-        concurrency=0,
+        func: Callable,
+        total: Optional[int] = None,
+        concurrency: int = 0,
         **kwargs,
     ):
-        super().__init__(func, total)
+        super().__init__(func=func, total=total)
 
         self.concurrency = concurrency
 
@@ -310,13 +434,13 @@ class AsyncMultiProcess(Iterator):
 
     def __init__(
         self,
-        func,
-        total=None,
-        concurrency=16,
-        nprocs=multiprocessing.cpu_count(),
+        func: Callable,
+        total: Optional[int] = None,
+        concurrency: int = 16,
+        nprocs: int = multiprocessing.cpu_count(),
         **kwargs,
     ):
-        super().__init__(func, total)
+        super().__init__(func=func, total=total)
 
         self.concurrency = concurrency
         self.nprocs = nprocs
@@ -365,12 +489,12 @@ class MultiThread(Iterator):
 
     def __init__(
         self,
-        func,
-        total=None,
-        nworkers=2,
+        func: Callable,
+        total: Optional[int] = None,
+        nworkers: int = 2,
         **kwargs,
     ):
-        super().__init__(func, total)
+        super().__init__(func=func, total=total)
 
         self.nworkers = nworkers if nworkers > 0 else 2
 
@@ -399,6 +523,15 @@ class MultiThread(Iterator):
 class ParallelProcess(Iterator):
     """
     ParallelProcess
+
+    A flexible multi-process runner designed to execute a function in parallel,
+    supporting both single-task and batch-task execution. It automatically splits
+    input arguments across processes, handles static vs dynamic arguments, and
+    provides optional progress bar support via shared counters.
+
+    Suitable for cases where:
+    - Each process handles a batch of tasks (is_single_task_func=False)
+    - Each task is processed independently (is_single_task_func=True)
 
     Parameters:
         func (callable): function to be iterated
@@ -448,16 +581,16 @@ class ParallelProcess(Iterator):
 
     def __init__(
         self,
-        func,
-        total=None,
-        nprocs=multiprocessing.cpu_count(),
-        is_single_task_func=True,
-        pbar_refresh_interval=1.0,
+        func: Callable,
+        total: Optional[int] = None,
+        nprocs: int = multiprocessing.cpu_count(),
+        is_single_task_func: bool = True,
+        pbar_refresh_interval: float = 1.0,
         **kwargs,
     ):
         if is_single_task_func:
             func = SingleProcess(func).run
-        super().__init__(func, total)
+        super().__init__(func=func, total=total)
 
         self.nprocs = nprocs if nprocs > 0 else multiprocessing.cpu_count()
         self.is_single_task_func = is_single_task_func
@@ -465,7 +598,6 @@ class ParallelProcess(Iterator):
 
     def parse(self, *args, **kwargs):
         """parse"""
-
         # infer the number of expected iterations from args
         if self.total is None:
             for arg in args:
@@ -493,7 +625,7 @@ class ParallelProcess(Iterator):
             if isinstance(arg, list):
                 assert (
                     len(arg) == self.total or len(arg) == self.nprocs
-                ), f"{len(arg)} != {self.total} or {len(arg)} != {self.nprocs}"
+                ), f"{len(arg)} != {self.total} and {len(arg)} != {self.nprocs}"
                 if len(arg) == self.nprocs:
                     for i in range(self.nprocs):
                         self.dynamic_args[i].append(arg[i])

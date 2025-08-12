@@ -5,7 +5,8 @@ This is a tool package.
 
 # Updates
 
- - [x] 2225.04.17: Add GPUPeakMemoryMonitor module
+ - [x] 2025.08.07: Add BoundedMultiProcess module
+ - [x] 2025.04.17: Add GPUPeakMemoryMonitor module
  - [x] 2024.12.27: Add GPU monitor module
  - [x] 2024.09.18: Add pcd2ply module
  - [x] 2023.12.05: Add CI/CD
@@ -39,6 +40,7 @@ This is a tool package.
     * MultiThread
     * AsyncProcess
     * AsyncMultiProcess
+    * BoundedMultiProcess
 * timer
 * time_consumption
 * pcd2ply
