@@ -7,6 +7,7 @@
 @Contact :   lihao57@baidu.com
 """
 
+import threading
 import multiprocessing
 from concurrent.futures import ThreadPoolExecutor
 import tqdm
@@ -17,7 +18,7 @@ import aiomultiprocess
 import numpy as np
 import time
 import inspect
-from typing import Callable, Optional, List, Tuple, Any
+from typing import Callable, Optional
 
 
 class Iterator:
@@ -705,15 +706,27 @@ class ParallelProcess(Iterator):
 
             # display progress bar
             with tqdm.tqdm(total=self.total) as pbar:
-                while True:
-                    pbar.n = counter.value
-                    pbar.refresh()
-                    time.sleep(self.pbar_refresh_interval)
-                    if pbar.n == self.total:
-                        break
 
-            for p in procs:
-                p.join()
+                def _update_pbar():
+                    """update function"""
+                    last_val = 0
+                    while any(p.is_alive() for p in procs):
+                        val = counter.value
+                        delta = val - last_val
+                        if delta > 0:
+                            pbar.update(delta)
+                            last_val = val
+                        time.sleep(self.pbar_refresh_interval)
+                    delta = val - counter.value
+                    if delta > 0:
+                        pbar.update(delta)
+
+                t = threading.Thread(target=_update_pbar, daemon=True)
+                t.start()
+
+                for p in procs:
+                    p.join()
+                t.join()
 
             ret_list = [results_dict[idx] for idx in range(self.nprocs)]
             # flatten the ret_list from 2d to 1d
