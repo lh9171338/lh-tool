@@ -18,7 +18,7 @@ import aiomultiprocess
 import numpy as np
 import time
 import inspect
-from typing import Callable, Optional
+from typing import Callable, Optional, Type
 
 
 class Iterator:
@@ -27,7 +27,7 @@ class Iterator:
 
     Parameters:
         func (callable): function to be iterated
-        total (int, optional): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
+        total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
     """
 
     def __init__(
@@ -102,13 +102,42 @@ class Iterator:
         raise NotImplementedError
 
 
+class AutoIterator(Iterator):
+    """
+    Auto Iterator
+
+    Create an iterator automatically based on the input arguments.
+
+    Parameters:
+        iterator_cls (type | None): iterator class, if not specified, will not use iterator
+        func (callable): function to be iterated
+        total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
+    """
+
+    def __init__(
+        self,
+        iterator_cls: Optional[Type[Iterator]],
+        func: Callable,
+        total: Optional[int] = None,
+        **kwargs,
+    ):
+        if iterator_cls:
+            self._func = iterator_cls(func=func, total=total, **kwargs).run
+        else:
+            self._func = func
+
+    def run(self, *args, **kwargs):
+        """run"""
+        return self._func(*args, **kwargs)
+
+
 class SingleProcess(Iterator):
     """
     SingleProcess
 
     Parameters:
         func (callable): function to be iterated
-        total (int, optional): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
+        total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
 
     Example:
         ```python
@@ -169,8 +198,8 @@ class MultiProcess(Iterator):
 
     Parameters:
         func (callable): function to be iterated
-        total (int, optional): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
-        nprocs (int, optional): number of processes, default is `multiprocessing.cpu_count()`
+        total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
+        nprocs (int): number of processes, default is `multiprocessing.cpu_count()`
 
     Example:
         ```python
@@ -220,6 +249,53 @@ class MultiProcess(Iterator):
         return ret_list
 
 
+class AutoMultiProcess(AutoIterator):
+    """
+    Auto Multi-Process
+
+    Create a `MultiProcess` iterator when `nprocs > 1` and a `SingleProcess` iterator otherwise.
+
+    Parameters:
+        func (callable): function to be iterated
+        total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
+        nprocs (int): number of processes, default is `multiprocessing.cpu_count()`
+
+    Example:
+        ```python
+        def add(a, b):
+            return a + b
+
+        a = [1, 2]
+        b = [3, 4]
+        # Use MultiProcess
+        res = AutoMultiProcess(add, nprocs=2).run(a, b)
+        print(res)
+        # [4, 6]
+
+        # Use SingleProcess
+        res = AutoMultiProcess(add, nprocs=1).run(a, b)
+        print(res)
+        # [4, 6]
+        ```
+    """
+
+    def __init__(
+        self,
+        func: Callable,
+        total: Optional[int] = None,
+        nprocs: int = multiprocessing.cpu_count(),
+        **kwargs,
+    ):
+        iterator_cls = MultiProcess if nprocs > 1 else SingleProcess
+        super().__init__(
+            iterator_cls=iterator_cls,
+            func=func,
+            total=total,
+            nprocs=nprocs,
+            **kwargs,
+        )
+
+
 class BoundedMultiProcess(Iterator):
     """
     Bounded Multi-Process
@@ -230,8 +306,8 @@ class BoundedMultiProcess(Iterator):
 
     Parameters:
         func (callable): function to be iterated
-        total (int, optional): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
-        nprocs (int, optional): number of processes, default is `multiprocessing.cpu_count()`
+        total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
+        nprocs (int): number of processes, default is `multiprocessing.cpu_count()`
 
     Example:
         ```python
@@ -344,14 +420,62 @@ class BoundedMultiProcess(Iterator):
         return ret_list
 
 
+class AutoBoundedMultiProcess(AutoIterator):
+    """
+    Auto Bounded Multi-Process
+
+    Create a `BoundedMultiProcess` iterator when `nprocs > 1` and a `SingleProcess` iterator otherwise.
+
+    Parameters:
+        func (callable): function to be iterated
+        total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
+        nprocs (int): number of processes, default is `multiprocessing.cpu_count()`
+
+    Example:
+        ```python
+        def add(a, b, port):
+            print(f"{port}: {a} + {b}")
+            return a + b
+
+        a = [1, 2, 3, 4]
+        b = [5, 6, 7, 8]
+        # Use MultiProcess, length of `port` must be equal to `nprocs`
+        res = AutoBoundedMultiProcess(add, nprocs=2).run(a, b, port=[8000, 8001])
+        print(res)
+        # [6, 8, 10, 12]
+
+        # Use SingleProcess, the type of `port` must be a scalar
+        res = AutoBoundedMultiProcess(add, nprocs=1).run(a, b, port=8000)
+        print(res)
+        # [6, 8, 10, 12]
+        ```
+    """
+
+    def __init__(
+        self,
+        func: Callable,
+        total: Optional[int] = None,
+        nprocs: int = multiprocessing.cpu_count(),
+        **kwargs,
+    ):
+        iterator_cls = BoundedMultiProcess if nprocs > 1 else SingleProcess
+        super().__init__(
+            iterator_cls=iterator_cls,
+            func=func,
+            total=total,
+            nprocs=nprocs,
+            **kwargs,
+        )
+
+
 class AsyncProcess(Iterator):
     """
     AsyncProcess
 
     Parameters:
         func (callable): function to be iterated
-        total (int, optional): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
-        concurrency (int, optional): concurrent, default is 0
+        total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
+        concurrency (int): concurrent, default is 0
 
     Example:
         ```python
@@ -415,9 +539,9 @@ class AsyncMultiProcess(Iterator):
 
     Parameters:
         func (callable): function to be iterated
-        total (int, optional): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
-        concurrency (int, optional): concurrent, default is 16
-        nprocs (int, optional): number of processes, default is `multiprocessing.cpu_count()`
+        total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
+        concurrency (int): concurrent, default is 16
+        nprocs (int): number of processes, default is `multiprocessing.cpu_count()`
 
     Example:
         ```python
@@ -466,14 +590,62 @@ class AsyncMultiProcess(Iterator):
         return self.ret_list
 
 
+class AutoAsyncMultiProcess(AutoIterator):
+    """
+    Auto AsyncMultiProcess
+
+    Create a `AsyncMultiProcess` iterator when `nprocs > 1` and a `AsyncProcess` iterator otherwise.
+
+    Parameters:
+        func (callable): function to be iterated
+        total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
+        nprocs (int): number of processes, default is `multiprocessing.cpu_count()`
+
+    Example:
+        ```python
+        async def add(a, b):
+            await asyncio.sleep(1)
+            return a + b
+
+        a = [1, 2]
+        b = [3, 4]
+        # Use AsyncMultiProcess
+        res = AutoAsyncMultiProcess(add, nprocs=2).run(a, b)
+        print(res)
+        # [4, 6]
+
+        # Use AsyncProcess
+        res = AutoAsyncMultiProcess(add, nprocs=1).run(a, b)
+        print(res)
+        # [4, 6]
+        ```
+    """
+
+    def __init__(
+        self,
+        func: Callable,
+        total: Optional[int] = None,
+        nprocs: int = multiprocessing.cpu_count(),
+        **kwargs,
+    ):
+        iterator_cls = AsyncMultiProcess if nprocs > 1 else AsyncProcess
+        super().__init__(
+            iterator_cls=iterator_cls,
+            func=func,
+            total=total,
+            nprocs=nprocs,
+            **kwargs,
+        )
+
+
 class MultiThread(Iterator):
     """
     MultiThread
 
     Parameters:
         func (callable): function to be iterated
-        total (int, optional): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
-        nworkers (int, optional): number of workers, default is 2
+        total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
+        nworkers (int): number of workers, default is 2
 
     Example:
         ```python
@@ -521,6 +693,53 @@ class MultiThread(Iterator):
         return ret_list
 
 
+class AutoMultiThread(AutoIterator):
+    """
+    Auto MultiThread
+
+    Create a `MultiThread` iterator when `nworkers > 1` and a `SingleProcess` iterator otherwise.
+
+    Parameters:
+        func (callable): function to be iterated
+        total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
+        nworkers (int): number of workers, default is 2
+
+    Example:
+        ```python
+        def add(a, b):
+            return a + b
+
+        a = [1, 2]
+        b = [3, 4]
+        # Use MultiThread
+        res = AutoMultiThread(add, nworkers=2).run(a, b)
+        print(res)
+        # [4, 6]
+
+        # Use SingleProcess
+        res = AutoMultiThread(add, nworkers=1).run(a, b)
+        print(res)
+        # [4, 6]
+        ```
+    """
+
+    def __init__(
+        self,
+        func: Callable,
+        total: Optional[int] = None,
+        nworkers: int = 2,
+        **kwargs,
+    ):
+        iterator_cls = MultiThread if nworkers > 1 else SingleProcess
+        super().__init__(
+            iterator_cls=iterator_cls,
+            func=func,
+            total=total,
+            nworkers=nworkers,
+            **kwargs,
+        )
+
+
 class ParallelProcess(Iterator):
     """
     ParallelProcess
@@ -536,10 +755,11 @@ class ParallelProcess(Iterator):
 
     Parameters:
         func (callable): function to be iterated
-        total (int, optional): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
-        nprocs (int, optional): number of processes, default is `multiprocessing.cpu_count()`
-        is_single_task_func (bool, optional): whether the function is single task, default is True (when version >= 1.11.1)
-        pbar_refresh_interval (float, optional): interval of progress bar refreshing, default is 1.0s
+        total (int | None): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
+        nprocs (int): number of processes, default is `multiprocessing.cpu_count()`
+        is_single_task_func (bool): whether the function is single task, default is True (when version >= 1.11.1)
+        pbar_refresh_interval (float): interval of progress bar refreshing, default is 1.0s
+        flatten_result (bool): whether to flatten the result for multi-task function, default is True
 
     Example:
         ```python
@@ -729,9 +949,6 @@ class ParallelProcess(Iterator):
                 t.join()
 
             ret_list = [results_dict[idx] for idx in range(self.nprocs)]
-            # flatten the ret_list from 2d to 1d
-            if self.is_single_task_func:
-                ret_list = [_ for sub_ret_list in ret_list for _ in sub_ret_list]
         else:
             for i in range(self.nprocs):
                 p = multiprocessing.Process(
@@ -751,4 +968,74 @@ class ParallelProcess(Iterator):
 
             ret_list = [results_dict[idx] for idx in range(self.nprocs)]
 
+        # flatten the ret_list from 2d to 1d
+        ret_list = [_ for sub_ret_list in ret_list for _ in sub_ret_list]
+
         return ret_list
+
+
+class AutoParallelProcess(AutoIterator):
+    """
+    Auto ParallelProcess
+
+    Create a `ParallelProcess` iterator when `nworkers > 1` and a `SingleProcess` iterator otherwise.
+
+    Parameters:
+        func (callable): function to be iterated
+        total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
+        nprocs (int): number of processes, default is `multiprocessing.cpu_count()`
+        is_single_task_func (bool): whether the function is single task, default is True (when version >= 1.11.1)
+
+    Example:
+        ```python
+        # For multi-task function
+        def add(arr1, arr2):
+            return [a + b for a, b in zip(arr1, arr2)]
+
+        a = [1, 2, 3, 4]
+        b = [3, 4, 5, 6]
+        # Use ParallelProcess
+        res = AutoParallelProcess(add, nprocs=2, is_single_task_func=False).run(a, b)
+        print(res)
+        # [[4, 6], [8, 10]]
+
+        # Use original function
+        res = AutoParallelProcess(add, nprocs=1, is_single_task_func=False).run(a, b)
+        print(res)
+        # [[4, 6], [8, 10]]
+
+        # For single-task function
+        def add(a, b):
+            return a + b
+
+        a = [1, 2, 3, 4]
+        b = [3, 4, 5, 6]
+        # Use ParallelProcess
+        res = AutoParallelProcess(add, nprocs=2, is_single_task_func=True).run(a, b)
+        print(res)
+        # [4, 6, 8, 10]
+
+        # Use SingleProcess
+        res = AutoParallelProcess(add, nprocs=1, is_single_task_func=True).run(a, b)
+        print(res)
+        # [4, 6, 8, 10]
+        ```
+    """
+
+    def __init__(
+        self,
+        func: Callable,
+        total: Optional[int] = None,
+        nprocs: int = multiprocessing.cpu_count(),
+        is_single_task_func: bool = True,
+        **kwargs,
+    ):
+        iterator_cls = ParallelProcess if nprocs > 1 else (SingleProcess if is_single_task_func else None)
+        super().__init__(
+            iterator_cls=iterator_cls,
+            func=func,
+            total=total,
+            nprocs=nprocs,
+            is_single_task_func=is_single_task_func,
+            **kwargs,
+        )

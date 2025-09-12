@@ -16,11 +16,16 @@ sys.path.append("../src")
 from lh_tool.iterator import (
     SingleProcess,
     MultiProcess,
+    AutoMultiProcess,
     BoundedMultiProcess,
+    AutoBoundedMultiProcess,
     MultiThread,
+    AutoMultiThread,
     AsyncProcess,
     AsyncMultiProcess,
+    AutoAsyncMultiProcess,
     ParallelProcess,
+    AutoParallelProcess,
 )
 
 
@@ -89,11 +94,11 @@ class TestIterator(unittest.TestCase):
 
     def test_single_process(self):
         """test single process"""
-        result_list = SingleProcess(self.process).run(self.a, self.b, opt="+")
-        self.assertEqual(result_list, self.res)
+        ret_list = SingleProcess(self.process).run(self.a, self.b, opt="+")
+        self.assertEqual(ret_list, self.res)
         exception = None
         try:
-            result_list = SingleProcess(self.process).run(self.a, self.b, "+")
+            ret_list = SingleProcess(self.process).run(self.a, self.b, "+")
         except Exception as e:
             exception = e
             print(e)
@@ -101,43 +106,69 @@ class TestIterator(unittest.TestCase):
 
     def test_multi_process(self):
         """test multi process"""
-        result_list = MultiProcess(self.process, nprocs=10).run(self.a, self.b, opt="+")
-        self.assertEqual(result_list, self.res)
+        ret_list = MultiProcess(self.process, nprocs=10).run(self.a, self.b, opt="+")
+        self.assertEqual(ret_list, self.res)
+
+    def test_auto_multi_process(self):
+        """test auto multi process"""
+        ret_list = AutoMultiProcess(self.process, nprocs=10).run(self.a, self.b, opt="+")
+        self.assertEqual(ret_list, self.res)
+        ret_list = AutoMultiProcess(self.process, nprocs=1).run(self.a, self.b, opt="+")
+        self.assertEqual(ret_list, self.res)
 
     def test_bounded_multi_process(self):
         """test resource slot multi process"""
-        result_list = BoundedMultiProcess(self.bounded_process, nprocs=2).run(
+        ret_list = BoundedMultiProcess(self.bounded_process, nprocs=2).run(self.a, self.b, opt="+", port=[8000, 8001])
+        self.assertEqual(ret_list, self.res)
+
+    def test_auto_bounded_multi_process(self):
+        """test auto resource slot multi process"""
+        ret_list = AutoBoundedMultiProcess(self.bounded_process, nprocs=2).run(
             self.a, self.b, opt="+", port=[8000, 8001]
         )
-        self.assertEqual(result_list, self.res)
+        self.assertEqual(ret_list, self.res)
+        ret_list = AutoBoundedMultiProcess(self.bounded_process, nprocs=1).run(self.a, self.b, opt="+", port=8000)
+        self.assertEqual(ret_list, self.res)
 
     def test_multi_thread(self):
         """test multi thread"""
-        result_list = MultiThread(self.process, nworkers=2).run(self.a, self.b, opt="+")
-        self.assertEqual(result_list, self.res)
+        ret_list = MultiThread(self.process, nworkers=2).run(self.a, self.b, opt="+")
+        self.assertEqual(ret_list, self.res)
+
+    def test_auto_multi_thread(self):
+        """test auto multi thread"""
+        ret_list = AutoMultiThread(self.process, nworkers=2).run(self.a, self.b, opt="+")
+        self.assertEqual(ret_list, self.res)
+        ret_list = AutoMultiThread(self.process, nworkers=1).run(self.a, self.b, opt="+")
+        self.assertEqual(ret_list, self.res)
 
     def test_async_process(self):
         """test async process"""
-        result_list = AsyncProcess(self.async_process).run(self.a, self.b, opt="+")
-        self.assertEqual(result_list, self.res)
+        ret_list = AsyncProcess(self.async_process).run(self.a, self.b, opt="+")
+        self.assertEqual(ret_list, self.res)
 
     def test_async_multi_process(self):
         """test async multi process"""
-        result_list = AsyncMultiProcess(self.async_process, nprocs=10).run(self.a, self.b, opt="+")
-        self.assertEqual(result_list, self.res)
+        ret_list = AsyncMultiProcess(self.async_process, nprocs=10).run(self.a, self.b, opt="+")
+        self.assertEqual(ret_list, self.res)
+
+    def test_auto_async_multi_process(self):
+        """test auto async multi process"""
+        ret_list = AutoAsyncMultiProcess(self.async_process, nprocs=10).run(self.a, self.b, opt="+")
+        self.assertEqual(ret_list, self.res)
+        ret_list = AutoAsyncMultiProcess(self.async_process, nprocs=1).run(self.a, self.b, opt="+")
+        self.assertEqual(ret_list, self.res)
 
     def test_parallel_process(self):
         """test parallel process"""
         ret_list = ParallelProcess(self.process_batch, is_single_task_func=False).run(self.a, self.b, opt="+")
-        result_list = [_ for ret in ret_list for _ in ret]
-        self.assertEqual(result_list, self.res)
+        self.assertEqual(ret_list, self.res)
 
         ret_list = ParallelProcess(self.process_batch_v2, is_single_task_func=False).run(self.a, self.b, opt="+")
-        result_list = [_ for ret in ret_list for _ in ret]
-        self.assertEqual(result_list, self.res)
+        self.assertEqual(ret_list, self.res)
 
-        result_list = ParallelProcess(self.process, is_single_task_func=True).run(self.a, self.b, opt="+")
-        self.assertEqual(result_list, self.res)
+        ret_list = ParallelProcess(self.process, is_single_task_func=True).run(self.a, self.b, opt="+")
+        self.assertEqual(ret_list, self.res)
         exception = None
         try:
             ret_list = ParallelProcess(self.process_batch, is_single_task_func=False).run(self.a, self.b, "+")
@@ -145,6 +176,31 @@ class TestIterator(unittest.TestCase):
             exception = e
             print(e)
         self.assertIsInstance(exception, RuntimeError)
+
+    def test_auto_parallel_process(self):
+        """test auto parallel process"""
+        ret_list = AutoParallelProcess(self.process_batch, is_single_task_func=False, nprocs=2).run(
+            self.a, self.b, opt="+"
+        )
+        self.assertEqual(ret_list, self.res)
+        ret_list = AutoParallelProcess(self.process_batch, is_single_task_func=False, nprocs=1).run(
+            self.a, self.b, opt="+"
+        )
+        self.assertEqual(ret_list, self.res)
+
+        ret_list = AutoParallelProcess(self.process_batch_v2, is_single_task_func=False, nprocs=2).run(
+            self.a, self.b, opt="+"
+        )
+        self.assertEqual(ret_list, self.res)
+        ret_list = AutoParallelProcess(self.process_batch_v2, is_single_task_func=False, nprocs=1).run(
+            self.a, self.b, opt="+"
+        )
+        self.assertEqual(ret_list, self.res)
+
+        ret_list = AutoParallelProcess(self.process, is_single_task_func=True, nprocs=2).run(self.a, self.b, opt="+")
+        self.assertEqual(ret_list, self.res)
+        ret_list = AutoParallelProcess(self.process, is_single_task_func=True, nprocs=1).run(self.a, self.b, opt="+")
+        self.assertEqual(ret_list, self.res)
 
 
 if __name__ == "__main__":
