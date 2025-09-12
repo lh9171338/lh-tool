@@ -41,6 +41,11 @@ This is a tool package.
     * AsyncProcess
     * AsyncMultiProcess
     * BoundedMultiProcess
+    * AutoMultiProcess
+    * AutoParallelProcess
+    * AutoMultiThread
+    * AutoAsyncMultiProcess
+    * AutoBoundedMultiProcess
 * timer
 * time_consumption
 * pcd2ply
