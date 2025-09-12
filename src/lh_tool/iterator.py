@@ -393,11 +393,18 @@ class BoundedMultiProcess(Iterator):
         # fix the static args
         self.partial_func = functools.partial(self.func, *self.static_args, **self.static_kwargs)
 
+    def initializer(self, counter):
+        """initializer"""
+        # Set process index
+        global _proc_idx
+        with counter.get_lock():
+            _proc_idx = counter.value
+            counter.value += 1
+
     def __call__(self, args):
         # Get process index
-        proc_name = multiprocessing.current_process().name
-        proc_idx = int(proc_name.split("-")[-1]) - 1
-        return self.partial_func(*args[0], **args[1], **self.process_kwargs[proc_idx])
+        global _proc_idx
+        return self.partial_func(*args[0], **args[1], **self.process_kwargs[_proc_idx])
 
     def run(self, *args, **kwargs):
         """
@@ -409,7 +416,8 @@ class BoundedMultiProcess(Iterator):
         self.parse(*args, **kwargs)
 
         # run
-        with multiprocessing.Pool(self.nprocs) as p:
+        counter = multiprocessing.Value("i", 0)
+        with multiprocessing.Pool(self.nprocs, self.initializer, (counter,)) as p:
             ret_list = list(
                 tqdm.tqdm(
                     p.imap(self, zip(self.dynamic_args, self.dynamic_kwargs)),
