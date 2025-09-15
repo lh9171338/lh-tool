@@ -3,7 +3,6 @@ changelog:
     - title: 🚀 Features
       labels:
         - feature
-        - enhancement
     - title: 💥 Enhancements
       labels:
         - enhancement
