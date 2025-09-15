@@ -1,0 +1,35 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '**'
+  workflow_dispatch: # 允许手动触发
+
+permissions:
+  contents: write   # 允许创建/更新 Release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up GitHub CLI
+        uses: cli/cli-action@v2
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 提取 tag 名字，例如 v1.0.0
+          TAG_NAME=${GITHUB_REF_NAME}
+
+          echo "Creating release for $TAG_NAME"
+
+          # 通过 GitHub API 自动生成 Release Notes
+          gh release create "$TAG_NAME" \
+            --generate-notes \
+            --title "$TAG_NAME"
