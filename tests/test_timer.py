@@ -38,6 +38,16 @@ class TestTimer(unittest.TestCase):
         # 误差小于1ms
         self.assertTrue(error.max() < 0.001)
 
+        times = [time.time()]
+        with Timer(100, self.callback, (times,)):
+            time.sleep(1)
+        times = np.array(times)
+        times = times[1:] - times[:-1]
+        error = np.abs(times - 0.1)
+        print(error)
+        # 误差小于1ms
+        self.assertTrue(error.max() < 0.001)
+
 
 if __name__ == "__main__":
     unittest.main()

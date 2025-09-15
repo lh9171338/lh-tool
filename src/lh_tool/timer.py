@@ -36,6 +36,10 @@ class Timer:
         timer.start()
         time.sleep(1)
         timer.stop()
+
+        # used as context manager
+        with Timer(100, callback):
+            time.sleep(1)
         ```
     """
 
@@ -49,6 +53,8 @@ class Timer:
         assert interval > 0, "interval must be greater than 0"
         assert isinstance(callback, Callable), "callback must be callable"
         self.interval = interval
+        self.args = args
+        self.kwargs = kwargs
         self.callback = partial(callback, *args, **kwargs)
 
         self.lock = threading.Lock()
@@ -104,3 +110,10 @@ class Timer:
 
             # run callback
             self.callback()
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.stop()
