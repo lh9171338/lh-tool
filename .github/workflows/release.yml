@@ -1,13 +1,17 @@
-name: Release
+name: Release 🚀
 
 on:
   push:
     tags:
-      - '**'
-  workflow_dispatch: # 允许手动触发
+      - "*"   # 推送 v* 形式的 tag 时触发
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to create (e.g. 1.2.3)'
+        required: true
 
 permissions:
-  contents: write   # 允许创建/更新 Release
+  contents: write
 
 jobs:
   release:
@@ -20,13 +24,16 @@ jobs:
       - name: Create Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
         run: |
-          TAG_NAME=${GITHUB_REF_NAME}
+          if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+            TAG_NAME="${GITHUB_REF#refs/tags/}"
+          else
+            TAG_NAME="${INPUT_TAG}"
+          fi
+
           echo "Creating release for $TAG_NAME"
 
-          gh release create "$TAG_NAME" \
-            --generate-notes \
-            --title "$TAG_NAME"
           gh release create "$TAG_NAME" \
             --generate-notes \
             --title "$TAG_NAME"
