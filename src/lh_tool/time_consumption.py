@@ -11,6 +11,7 @@
 import time
 from typing import Callable, Optional
 import functools
+import asyncio
 
 
 class TimeConsumptionDecorator:
@@ -45,9 +46,9 @@ class TimeConsumptionDecorator:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             """wrapper"""
-            start_time = time.time()
+            start_time = time.perf_counter()
             ret = func(*args, **kwargs)
-            end_time = time.time()
+            end_time = time.perf_counter()
             self._print_func("{} time consuming: {}".format(str(func).split(" ")[1], end_time - start_time))
             return ret
 
@@ -80,11 +81,11 @@ class TimeConsumptionContextManager:
         self._print_func = print_func
 
     def __enter__(self):
-        self.start_time = time.time()
+        self.start_time = time.perf_counter()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.end_time = time.time()
+        self.end_time = time.perf_counter()
         if self._context:
             self._print_func("{} time consuming: {}".format(self._context, self.end_time - self.start_time))
         else:
@@ -105,20 +106,34 @@ class TimeConsumption:
         ```python
         # used as decorator
         @TimeConsumption()
-        def test():
+        def func():
             time.sleep(1)
 
-        test()
+        func()
 
         # used as context manager
         with TimeConsumption("block"):
             time.sleep(1)
 
-        # for pytorch code block
+        # for pytorch code block, you need to set `sync=True`
         with TimeConsumption("block", sync=True):
             x = torch.randn((1000, 1000)).to("cuda")
             y = torch.randn((1000, 1000)).to("cuda")
             z = x + y
+
+        # for async function
+        import asyncio
+
+        @TimeConsumption()
+        async def func():
+            await asyncio.sleep(0.1)
+
+        asyncio.run(func())
+
+        async def func():
+            async with TimeConsumption():
+                await asyncio.sleep(0.1)
+        asyncio.run(func())
         ```
     """
 
@@ -141,37 +156,61 @@ class TimeConsumption:
             self._synchronize = lambda: None
 
     def __call__(self, func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            """wrapper"""
-            start_time = time.time()
-            self._synchronize()
-            ret = func(*args, **kwargs)
-            self._synchronize()
-            delta_time = time.time() - start_time
-            if self._format_func is not None:
-                delta_time = self._format_func(delta_time)
-            context = self._context if self._context else str(func).split(" ")[1]
-            self._print_func(f"{context} time consuming: {delta_time}")
-            return ret
+        if asyncio.iscoroutinefunction(func):
+
+            @functools.wraps(func)
+            async def wrapper(*args, **kwargs):
+                """wrapper"""
+                start_time = time.perf_counter()
+                self._synchronize()
+                ret = await func(*args, **kwargs)
+                self._synchronize()
+                delta_time = time.perf_counter() - start_time
+                if self._format_func is not None:
+                    delta_time = self._format_func(delta_time)
+                context = self._context if self._context else str(func).split(" ")[1]
+                self._print_func(f"{context} time consuming: {delta_time}")
+                return ret
+
+        else:
+
+            @functools.wraps(func)
+            def wrapper(*args, **kwargs):
+                """wrapper"""
+                start_time = time.perf_counter()
+                self._synchronize()
+                ret = func(*args, **kwargs)
+                self._synchronize()
+                delta_time = time.perf_counter() - start_time
+                if self._format_func is not None:
+                    delta_time = self._format_func(delta_time)
+                context = self._context if self._context else str(func).split(" ")[1]
+                self._print_func(f"{context} time consuming: {delta_time}")
+                return ret
 
         wrapper.__name__ = func.__name__
         return wrapper
 
     def __enter__(self):
-        self.start_time = time.time()
+        self.start_time = time.perf_counter()
         self._synchronize()
         return self
 
+    async def __aenter__(self):
+        return self.__enter__()
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._synchronize()
-        delta_time = time.time() - self.start_time
+        delta_time = time.perf_counter() - self.start_time
         if self._format_func is not None:
             delta_time = self._format_func(delta_time)
         if self._context:
             self._print_func(f"{self._context} time consuming: {delta_time}")
         else:
             self._print_func(f"time consuming: {delta_time}")
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        return self.__exit__(exc_type, exc_val, exc_tb)
 
 
 def time_consumption(
@@ -201,11 +240,25 @@ def time_consumption(
         with time_consumption("block"):
             time.sleep(1)
 
-        # for pytorch code block
+        # for pytorch code block, you need to set `sync=True`
         with time_consumption("block", sync=True):
             x = torch.randn((1000, 1000)).to("cuda")
             y = torch.randn((1000, 1000)).to("cuda")
             z = x + y
+
+        # for async function
+        import asyncio
+
+        @time_consumption()
+        async def func():
+            await asyncio.sleep(0.1)
+
+        asyncio.run(func())
+
+        async def func():
+            async with time_consumption():
+                await asyncio.sleep(0.1)
+        asyncio.run(func())
         ```
     """
     return TimeConsumption(context=context, print_func=print_func, format_func=format_func, sync=sync)
