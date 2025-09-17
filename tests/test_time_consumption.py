@@ -11,6 +11,7 @@
 import unittest
 import time
 import sys
+import asyncio
 
 sys.path.append("../src")
 from lh_tool.time_consumption import (
@@ -58,6 +59,23 @@ class TestConsumption(unittest.TestCase):
 
         with TimeConsumption():
             time.sleep(0.1)
+        self.assertTrue(True)
+
+    def test_async_time_consumption_class(self):
+        """test async time consumption class"""
+
+        @TimeConsumption()
+        async def func():
+            """func"""
+            await asyncio.sleep(0.1)
+
+        asyncio.run(func())
+
+        async def func():
+            async with TimeConsumption():
+                await asyncio.sleep(0.1)
+
+        asyncio.run(func())
         self.assertTrue(True)
 
     def test_time_consumption_function(self):
