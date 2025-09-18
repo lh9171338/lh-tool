@@ -28,16 +28,19 @@ class Iterator:
     Parameters:
         func (callable): function to be iterated
         total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
+        disable_pbar (bool): whether to disable progress bar, default is `False`
     """
 
     def __init__(
         self,
         func: Callable,
         total: Optional[int] = None,
+        disable_pbar: bool = False,
         **kwargs,
     ):
         self.func = func
         self.total = total
+        self.disable_pbar = disable_pbar
         self.dynamic_args = None
         self.static_args = None
         self.dynamic_kwargs = None
@@ -112,6 +115,7 @@ class AutoIterator(Iterator):
         iterator_cls (type | None): iterator class, if not specified, will not use iterator
         func (callable): function to be iterated
         total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
+        **kwargs: inherited from `Iterator`
     """
 
     def __init__(
@@ -136,8 +140,7 @@ class SingleProcess(Iterator):
     SingleProcess
 
     Parameters:
-        func (callable): function to be iterated
-        total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
+        inherited from `Iterator`
 
     Example:
         ```python
@@ -151,14 +154,6 @@ class SingleProcess(Iterator):
         # [4, 6]
         ```
     """
-
-    def __init__(
-        self,
-        func: Callable,
-        total: Optional[int] = None,
-        **kwargs,
-    ):
-        super().__init__(func=func, total=total)
 
     def run(self, *args, **kwargs):
         """
@@ -187,6 +182,7 @@ class SingleProcess(Iterator):
                 zip(self.dynamic_args, self.dynamic_kwargs),
                 total=self.total,
                 desc=self.func.__name__,
+                disable=self.disable_pbar,
             ):
                 ret_list.append(self.partial_func(*args, **kwargs))
         return ret_list
@@ -200,6 +196,7 @@ class MultiProcess(Iterator):
         func (callable): function to be iterated
         total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
         nprocs (int): number of processes, default is `multiprocessing.cpu_count()`
+        **kwargs: inherited from `Iterator`
 
     Example:
         ```python
@@ -221,7 +218,7 @@ class MultiProcess(Iterator):
         nprocs: int = multiprocessing.cpu_count(),
         **kwargs,
     ):
-        super().__init__(func=func, total=total)
+        super().__init__(func=func, total=total, **kwargs)
 
         self.nprocs = nprocs if nprocs > 0 else multiprocessing.cpu_count()
 
@@ -244,6 +241,7 @@ class MultiProcess(Iterator):
                     p.imap(self, zip(self.dynamic_args, self.dynamic_kwargs)),
                     total=self.total,
                     desc=self.func.__name__,
+                    disable=self.disable_pbar,
                 )
             )
         return ret_list
@@ -259,6 +257,7 @@ class AutoMultiProcess(AutoIterator):
         func (callable): function to be iterated
         total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
         nprocs (int): number of processes, default is `multiprocessing.cpu_count()`
+        **kwargs: inherited from `AutoIterator`
 
     Example:
         ```python
@@ -308,6 +307,7 @@ class BoundedMultiProcess(Iterator):
         func (callable): function to be iterated
         total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
         nprocs (int): number of processes, default is `multiprocessing.cpu_count()`
+        **kwargs: inherited from `Iterator`
 
     Example:
         ```python
@@ -331,7 +331,7 @@ class BoundedMultiProcess(Iterator):
         nprocs: int = multiprocessing.cpu_count(),
         **kwargs,
     ):
-        super().__init__(func=func, total=total)
+        super().__init__(func=func, total=total, **kwargs)
 
         self.nprocs = nprocs if nprocs > 0 else multiprocessing.cpu_count()
 
@@ -423,6 +423,7 @@ class BoundedMultiProcess(Iterator):
                     p.imap(self, zip(self.dynamic_args, self.dynamic_kwargs)),
                     total=self.total,
                     desc=self.func.__name__,
+                    disable=self.disable_pbar,
                 )
             )
         return ret_list
@@ -438,6 +439,7 @@ class AutoBoundedMultiProcess(AutoIterator):
         func (callable): function to be iterated
         total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
         nprocs (int): number of processes, default is `multiprocessing.cpu_count()`
+        **kwargs: inherited from `AutoIterator`
 
     Example:
         ```python
@@ -484,6 +486,7 @@ class AsyncProcess(Iterator):
         func (callable): function to be iterated
         total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
         concurrency (int): concurrent, default is 0
+        **kwargs: inherited from `Iterator`
 
     Example:
         ```python
@@ -506,7 +509,7 @@ class AsyncProcess(Iterator):
         concurrency: int = 0,
         **kwargs,
     ):
-        super().__init__(func=func, total=total)
+        super().__init__(func=func, total=total, **kwargs)
 
         self.concurrency = concurrency
 
@@ -523,7 +526,9 @@ class AsyncProcess(Iterator):
         else:
             sem = None
         tasks = [asyncio.create_task(self(sem, args)) for args in zip(self.dynamic_args, self.dynamic_kwargs)]
-        for f in tqdm.asyncio.tqdm.as_completed(tasks, total=self.total, desc=self.func.__name__):
+        for f in tqdm.asyncio.tqdm.as_completed(
+            tasks, total=self.total, desc=self.func.__name__, disable=self.disable_pbar
+        ):
             await f
         self.ret_list = [task.result() for task in tasks]
 
@@ -550,6 +555,7 @@ class AsyncMultiProcess(Iterator):
         total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
         concurrency (int): concurrent, default is 16
         nprocs (int): number of processes, default is `multiprocessing.cpu_count()`
+        **kwargs: inherited from `Iterator`
 
     Example:
         ```python
@@ -573,7 +579,7 @@ class AsyncMultiProcess(Iterator):
         nprocs: int = multiprocessing.cpu_count(),
         **kwargs,
     ):
-        super().__init__(func=func, total=total)
+        super().__init__(func=func, total=total, **kwargs)
 
         self.concurrency = concurrency
         self.nprocs = nprocs
@@ -585,7 +591,12 @@ class AsyncMultiProcess(Iterator):
         self.ret_list = []
         async with aiomultiprocess.Pool(self.nprocs, childconcurrency=self.concurrency) as p:
             it = p.map(self, zip(self.dynamic_args, self.dynamic_kwargs)).__aiter__()
-            self.ret_list = [a async for a in tqdm.asyncio.tqdm(it, total=self.total, desc=self.func.__name__)]
+            self.ret_list = [
+                a
+                async for a in tqdm.asyncio.tqdm(
+                    it, total=self.total, desc=self.func.__name__, disable=self.disable_pbar
+                )
+            ]
 
     def run(self, *args, **kwargs):
         """run - Please ensure that static arguments precede dynamic arguments"""
@@ -608,6 +619,7 @@ class AutoAsyncMultiProcess(AutoIterator):
         func (callable): function to be iterated
         total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
         nprocs (int): number of processes, default is `multiprocessing.cpu_count()`
+        **kwargs: inherited from `AutoIterator`
 
     Example:
         ```python
@@ -654,6 +666,7 @@ class MultiThread(Iterator):
         func (callable): function to be iterated
         total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
         nworkers (int): number of workers, default is 2
+        **kwargs: inherited from `Iterator`
 
     Example:
         ```python
@@ -675,7 +688,7 @@ class MultiThread(Iterator):
         nworkers: int = 2,
         **kwargs,
     ):
-        super().__init__(func=func, total=total)
+        super().__init__(func=func, total=total, **kwargs)
 
         self.nworkers = nworkers if nworkers > 0 else 2
 
@@ -695,7 +708,7 @@ class MultiThread(Iterator):
         with ThreadPoolExecutor(max_workers=self.nworkers) as p:
             tasks = [p.submit(self, args) for args in zip(self.dynamic_args, self.dynamic_kwargs)]
         ret_list = []
-        for task in tqdm.tqdm(tasks, total=self.total, desc=self.func.__name__):
+        for task in tqdm.tqdm(tasks, total=self.total, desc=self.func.__name__, disable=self.disable_pbar):
             ret_list.append(task.result())
 
         return ret_list
@@ -711,6 +724,7 @@ class AutoMultiThread(AutoIterator):
         func (callable): function to be iterated
         total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
         nworkers (int): number of workers, default is 2
+        **kwargs: inherited from `AutoIterator`
 
     Example:
         ```python
@@ -768,6 +782,7 @@ class ParallelProcess(Iterator):
         is_single_task_func (bool): whether the function is single task, default is True (when version >= 1.11.1)
         pbar_refresh_interval (float): interval of progress bar refreshing, default is 1.0s
         flatten_result (bool): whether to flatten the result for multi-task function, default is True
+        **kwargs: inherited from `Iterator`
 
     Example:
         ```python
@@ -819,7 +834,7 @@ class ParallelProcess(Iterator):
     ):
         if is_single_task_func:
             func = SingleProcess(func).run
-        super().__init__(func=func, total=total)
+        super().__init__(func=func, total=total, **kwargs)
 
         self.nprocs = nprocs if nprocs > 0 else multiprocessing.cpu_count()
         self.is_single_task_func = is_single_task_func
@@ -933,7 +948,7 @@ class ParallelProcess(Iterator):
                 p.start()
 
             # display progress bar
-            with tqdm.tqdm(total=self.total) as pbar:
+            with tqdm.tqdm(total=self.total, disable=self.disable_pbar) as pbar:
 
                 def _update_pbar():
                     """update function"""
@@ -993,6 +1008,7 @@ class AutoParallelProcess(AutoIterator):
         total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
         nprocs (int): number of processes, default is `multiprocessing.cpu_count()`
         is_single_task_func (bool): whether the function is single task, default is True (when version >= 1.11.1)
+        **kwargs: inherited from `AutoIterator`
 
     Example:
         ```python
