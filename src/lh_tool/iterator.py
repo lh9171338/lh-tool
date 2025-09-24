@@ -19,6 +19,7 @@ import numpy as np
 import time
 import inspect
 from typing import Callable, Optional, Type
+import atexit
 
 
 class Iterator:
@@ -46,6 +47,13 @@ class Iterator:
         self.dynamic_kwargs = None
         self.static_kwargs = None
         self.partial_func = None
+        # register exit handler
+        if hasattr(self, "close"):
+            atexit.register(self.close)
+
+    def __del__(self):
+        if hasattr(self, "close"):
+            self.close()
 
     def parse(self, *args, **kwargs):
         """parse"""
@@ -221,9 +229,17 @@ class MultiProcess(Iterator):
         super().__init__(func=func, total=total, **kwargs)
 
         self.nprocs = nprocs if nprocs > 0 else multiprocessing.cpu_count()
+        self.pool = multiprocessing.Pool(self.nprocs)
 
-    def __call__(self, args):
-        return self.partial_func(*args[0], **args[1])
+    def close(self):
+        if self.pool:
+            self.pool.close()
+            self.pool.join()
+            self.pool = None
+
+    @staticmethod
+    def func_warpper(func, args):
+        return func(*args[0], **args[1])
 
     def run(self, *args, **kwargs):
         """
@@ -235,15 +251,15 @@ class MultiProcess(Iterator):
         self.parse(*args, **kwargs)
 
         # run
-        with multiprocessing.Pool(self.nprocs) as p:
-            ret_list = list(
-                tqdm.tqdm(
-                    p.imap(self, zip(self.dynamic_args, self.dynamic_kwargs)),
-                    total=self.total,
-                    desc=self.func.__name__,
-                    disable=self.disable_pbar,
-                )
+        func = functools.partial(self.func_warpper, self.partial_func)
+        ret_list = list(
+            tqdm.tqdm(
+                self.pool.imap(func, zip(self.dynamic_args, self.dynamic_kwargs)),
+                total=self.total,
+                desc=self.func.__name__,
+                disable=self.disable_pbar,
             )
+        )
         return ret_list
 
 
@@ -334,6 +350,14 @@ class BoundedMultiProcess(Iterator):
         super().__init__(func=func, total=total, **kwargs)
 
         self.nprocs = nprocs if nprocs > 0 else multiprocessing.cpu_count()
+        counter = multiprocessing.Value("i", 0)
+        self.pool = multiprocessing.Pool(self.nprocs, self.initializer, (counter,))
+
+    def close(self):
+        if self.pool:
+            self.pool.close()
+            self.pool.join()
+            self.pool = None
 
     def parse(self, *args, **kwargs):
         """parse"""
@@ -401,10 +425,11 @@ class BoundedMultiProcess(Iterator):
             _proc_idx = counter.value
             counter.value += 1
 
-    def __call__(self, args):
+    @staticmethod
+    def func_warpper(func, process_kwargs, args):
         # Get process index
         global _proc_idx
-        return self.partial_func(*args[0], **args[1], **self.process_kwargs[_proc_idx])
+        return func(*args[0], **args[1], **process_kwargs[_proc_idx])
 
     def run(self, *args, **kwargs):
         """
@@ -416,16 +441,15 @@ class BoundedMultiProcess(Iterator):
         self.parse(*args, **kwargs)
 
         # run
-        counter = multiprocessing.Value("i", 0)
-        with multiprocessing.Pool(self.nprocs, self.initializer, (counter,)) as p:
-            ret_list = list(
-                tqdm.tqdm(
-                    p.imap(self, zip(self.dynamic_args, self.dynamic_kwargs)),
-                    total=self.total,
-                    desc=self.func.__name__,
-                    disable=self.disable_pbar,
-                )
+        func = functools.partial(self.func_warpper, self.partial_func, self.process_kwargs)
+        ret_list = list(
+            tqdm.tqdm(
+                self.pool.imap(func, zip(self.dynamic_args, self.dynamic_kwargs)),
+                total=self.total,
+                desc=self.func.__name__,
+                disable=self.disable_pbar,
             )
+        )
         return ret_list
 
 
@@ -512,6 +536,13 @@ class AsyncProcess(Iterator):
         super().__init__(func=func, total=total, **kwargs)
 
         self.concurrency = concurrency
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
+
+    def close(self):
+        if self.loop:
+            self.loop.close()
+            self.loop = None
 
     async def __call__(self, sem, args):
         if sem is None:
@@ -525,7 +556,7 @@ class AsyncProcess(Iterator):
             sem = asyncio.Semaphore(self.concurrency)
         else:
             sem = None
-        tasks = [asyncio.create_task(self(sem, args)) for args in zip(self.dynamic_args, self.dynamic_kwargs)]
+        tasks = [self.loop.create_task(self(sem, args)) for args in zip(self.dynamic_args, self.dynamic_kwargs)]
         for f in tqdm.asyncio.tqdm.as_completed(
             tasks, total=self.total, desc=self.func.__name__, disable=self.disable_pbar
         ):
@@ -542,7 +573,7 @@ class AsyncProcess(Iterator):
         self.parse(*args, **kwargs)
 
         # run
-        asyncio.run(self.main())
+        self.loop.run_until_complete(self.main())
         return self.ret_list
 
 
@@ -691,6 +722,12 @@ class MultiThread(Iterator):
         super().__init__(func=func, total=total, **kwargs)
 
         self.nworkers = nworkers if nworkers > 0 else 2
+        self.executor = ThreadPoolExecutor(max_workers=self.nworkers)
+
+    def close(self):
+        if self.executor:
+            self.executor.shutdown(wait=True)
+            self.executor = None
 
     def __call__(self, args):
         return self.partial_func(*args[0], **args[1])
@@ -705,8 +742,7 @@ class MultiThread(Iterator):
         self.parse(*args, **kwargs)
 
         # run
-        with ThreadPoolExecutor(max_workers=self.nworkers) as p:
-            tasks = [p.submit(self, args) for args in zip(self.dynamic_args, self.dynamic_kwargs)]
+        tasks = [self.executor.submit(self, args) for args in zip(self.dynamic_args, self.dynamic_kwargs)]
         ret_list = []
         for task in tqdm.tqdm(tasks, total=self.total, desc=self.func.__name__, disable=self.disable_pbar):
             ret_list.append(task.result())
@@ -839,6 +875,12 @@ class ParallelProcess(Iterator):
         self.nprocs = nprocs if nprocs > 0 else multiprocessing.cpu_count()
         self.is_single_task_func = is_single_task_func
         self.pbar_refresh_interval = pbar_refresh_interval
+        self.manager = multiprocessing.Manager()
+
+    def close(self):
+        if self.manager:
+            self.manager.shutdown()
+            self.manager = None
 
     def parse(self, *args, **kwargs):
         """parse"""
@@ -923,8 +965,7 @@ class ParallelProcess(Iterator):
 
         # run
         procs = []
-        manager = multiprocessing.Manager()
-        results_dict = manager.dict()
+        results_dict = self.manager.dict()
 
         # check if function has `_counter` args
         has_counter = False
