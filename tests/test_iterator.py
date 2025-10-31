@@ -126,6 +126,16 @@ class TestIterator(unittest.TestCase):
         )
         self.assertEqual(ret_list, self.res)
 
+        exception = None
+        try:
+            ret_list = BoundedMultiProcess(
+                self.bounded_process, nprocs=len(self.a), disable_pbar=self.disable_pbar
+            ).run(self.a, self.b, opt="+", port=list(range(8000, 8000 + len(self.a))))
+        except Exception as e:
+            exception = e
+            print(e)
+        self.assertIsInstance(exception, AssertionError)
+
     def test_auto_bounded_multi_process(self):
         """test auto resource slot multi process"""
         ret_list = AutoBoundedMultiProcess(self.bounded_process, nprocs=2, disable_pbar=self.disable_pbar).run(
@@ -192,6 +202,12 @@ class TestIterator(unittest.TestCase):
             self.a, self.b, opt="+"
         )
         self.assertEqual(ret_list, self.res)
+
+        ret_list = ParallelProcess(
+            self.process, nprocs=len(self.a), is_single_task_func=True, disable_pbar=self.disable_pbar
+        ).run(self.a, self.b, opt="+")
+        self.assertEqual(ret_list, self.res)
+
         exception = None
         try:
             ret_list = ParallelProcess(
