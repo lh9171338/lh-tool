@@ -203,17 +203,18 @@ def monitor(args):
         else:
             low_utilization_start_time = None
 
-        if (utilizations == last_utilizations).all():
-            if constant_utilization_start_time is None:
-                constant_utilization_start_time = cur_time
+        if args.enable_constant_utilization_monitor:
+            if (utilizations == last_utilizations).all():
+                if constant_utilization_start_time is None:
+                    constant_utilization_start_time = cur_time
+                else:
+                    logging.info(f"constant utilization detected: {cur_time - constant_utilization_start_time}s")
+                    if cur_time - constant_utilization_start_time >= args.time_threshold:
+                        trigger = True
+                        logging.warning(f"constant utilization detected, utilization: {utilizations}")
             else:
-                logging.info(f"constant utilization detected: {cur_time - constant_utilization_start_time}s")
-                if cur_time - constant_utilization_start_time >= args.time_threshold:
-                    trigger = True
-                    logging.warning(f"constant utilization detected, utilization: {utilizations}")
-        else:
-            constant_utilization_start_time = None
-        last_utilizations = utilizations
+                constant_utilization_start_time = None
+            last_utilizations = utilizations
 
         if trigger:
             if args.command is not None:
@@ -255,8 +256,14 @@ def main():
         "-u",
         "--utilization_threshold",
         type=float,
-        help="utilization threshold (units of percentage), default: 0%%",
+        help="utilization threshold (units of percentage), default: 0%%, negative means no limit",
         default=0,
+    )
+    parser.add_argument(
+        "-e",
+        "--enable_constant_utilization_monitor",
+        action="store_true",
+        help="whether enable constant utilization monitor, default: False",
     )
     parser.add_argument(
         "-t",
