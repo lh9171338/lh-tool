@@ -84,7 +84,7 @@ class Iterator:
             dynamic_arg_flags = np.array(dynamic_arg_flags)
             if (dynamic_arg_flags[:-1] > dynamic_arg_flags[1:]).any():
                 msg = ["dynamic" if flag else "static" for flag in dynamic_arg_flags]
-                raise RuntimeError(f"dynamic arguments precede static arguments: {msg}")
+                raise RuntimeError(f"Dynamic arguments precede static arguments: {msg}")
 
         # parse kwargs
         self.dynamic_kwargs = [{} for _ in range(self.total)]
@@ -301,7 +301,8 @@ class BoundedMultiProcess(Iterator):
 
     A utility to run a function in parallel using multiple processes,
     with support for per-process resource binding (e.g., GPU ID, port).
-    Make sure the number of resources equals the number of processes.
+    Make sure the number of resources equals the number of processes,
+    and the resources arguments must be passed as keyword arguments.
 
     Parameters:
         func (callable): function to be iterated
@@ -352,6 +353,9 @@ class BoundedMultiProcess(Iterator):
                     break
 
         assert self.total is not None, "Can not infer the number of expected iterations"
+        assert (
+            self.total != self.nprocs
+        ), "Ensure that `total != nprocs`; otherwise, it will be unclear whether the argument represents a resource. Please use `MultiProcess` instead"
 
         # parse args
         self.dynamic_args = [[] for _ in range(self.total)]
@@ -372,7 +376,7 @@ class BoundedMultiProcess(Iterator):
             dynamic_arg_flags = np.array(dynamic_arg_flags)
             if (dynamic_arg_flags[:-1] > dynamic_arg_flags[1:]).any():
                 msg = ["dynamic" if flag else "static" for flag in dynamic_arg_flags]
-                raise RuntimeError(f"dynamic arguments precede static arguments: {msg}")
+                raise RuntimeError(f"Dynamic arguments precede static arguments: {msg}")
 
         # parse kwargs
         self.process_kwargs = [{} for _ in range(self.nprocs)]
@@ -857,6 +861,10 @@ class ParallelProcess(Iterator):
                     break
 
         assert self.total is not None, "Can not infer the number of expected iterations"
+        if self.total == self.nprocs:
+            print(
+                "Warning: When resource arguments are provided, please ensure that `total != nprocs`; otherwise, it will be ambiguous whether the argument represents a resource or not"
+            )
 
         # split tasks
         indices = np.linspace(0, self.total, self.nprocs + 1).astype("int32")
@@ -870,12 +878,12 @@ class ParallelProcess(Iterator):
                 assert (
                     len(arg) == self.total or len(arg) == self.nprocs
                 ), f"{len(arg)} != {self.total} and {len(arg)} != {self.nprocs}"
-                if len(arg) == self.nprocs:
-                    for i in range(self.nprocs):
-                        self.dynamic_args[i].append(arg[i])
-                else:
+                if len(arg) == self.total:
                     for i in range(self.nprocs):
                         self.dynamic_args[i].append(arg[indices[i] : indices[i + 1]])
+                else:
+                    for i in range(self.nprocs):
+                        self.dynamic_args[i].append(arg[i])
                 dynamic_arg_flags.append(True)
             else:
                 self.static_args.append(arg)
@@ -886,7 +894,7 @@ class ParallelProcess(Iterator):
             dynamic_arg_flags = np.array(dynamic_arg_flags)
             if (dynamic_arg_flags[:-1] > dynamic_arg_flags[1:]).any():
                 msg = ["dynamic" if flag else "static" for flag in dynamic_arg_flags]
-                raise RuntimeError(f"dynamic arguments precede static arguments: {msg}")
+                raise RuntimeError(f"Dynamic arguments precede static arguments: {msg}")
 
         # parse kwargs
         self.dynamic_kwargs = [{} for _ in range(self.nprocs)]
@@ -896,12 +904,12 @@ class ParallelProcess(Iterator):
                 assert (
                     len(value) == self.total or len(value) == self.nprocs
                 ), f"{len(value)} != {self.total} or {len(value)} != {self.nprocs}"
-                if len(value) == self.nprocs:
-                    for i in range(self.nprocs):
-                        self.dynamic_kwargs[i][key] = value[i]
-                else:
+                if len(value) == self.total:
                     for i in range(self.nprocs):
                         self.dynamic_kwargs[i][key] = value[indices[i] : indices[i + 1]]
+                else:
+                    for i in range(self.nprocs):
+                        self.dynamic_kwargs[i][key] = value[i]
             else:
                 self.static_kwargs[key] = value
 
