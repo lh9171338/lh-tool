@@ -711,9 +711,9 @@ class MultiThread(Iterator):
         # run
         with ThreadPoolExecutor(max_workers=self.nworkers) as p:
             tasks = [p.submit(self, args) for args in zip(self.dynamic_args, self.dynamic_kwargs)]
-        ret_list = []
-        for task in tqdm.tqdm(tasks, total=self.total, desc=self.func.__name__, disable=self.disable_pbar):
-            ret_list.append(task.result())
+            ret_list = []
+            for task in tqdm.tqdm(tasks, total=self.total, desc=self.func.__name__, disable=self.disable_pbar):
+                ret_list.append(task.result())
 
         return ret_list
 
@@ -968,7 +968,7 @@ class ParallelProcess(Iterator):
                             pbar.update(delta)
                             last_val = val
                         time.sleep(self.pbar_refresh_interval)
-                    delta = val - counter.value
+                    delta = counter.value - last_val
                     if delta > 0:
                         pbar.update(delta)
 
