@@ -11,6 +11,7 @@
 import unittest
 import asyncio
 import sys
+import time
 
 sys.path.append("../src")
 from lh_tool.iterator import (
@@ -43,6 +44,7 @@ class TestIterator(unittest.TestCase):
     @staticmethod
     def process(a, b, opt="+"):
         """process"""
+        time.sleep(0.5)
         if opt == "+":
             return a + b
         else:
@@ -51,6 +53,7 @@ class TestIterator(unittest.TestCase):
     @staticmethod
     def bounded_process(a, b, opt="+", port=8000):
         """resource slot process"""
+        time.sleep(0.5)
         print(f"{port}: {a} {opt} {b}")
         if opt == "+":
             return a + b
@@ -62,6 +65,7 @@ class TestIterator(unittest.TestCase):
         """process batch"""
         res_list = []
         for a, b in zip(a_list, b_list):
+            time.sleep(0.5)
             if opt == "+":
                 res = a + b
             else:
@@ -74,6 +78,7 @@ class TestIterator(unittest.TestCase):
         """process batch"""
         res_list = []
         for a, b in zip(a_list, b_list):
+            time.sleep(0.5)
             if opt == "+":
                 res = a + b
             else:
