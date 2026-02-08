@@ -9,7 +9,7 @@
 
 import threading
 import multiprocessing
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import tqdm
 import tqdm.asyncio
 import functools
@@ -223,7 +223,8 @@ class MultiProcess(Iterator):
         self.nprocs = nprocs if nprocs > 0 else multiprocessing.cpu_count()
 
     def __call__(self, args):
-        return self.partial_func(*args[0], **args[1])
+        idx = args[2]
+        return idx, self.partial_func(*args[0], **args[1])
 
     def run(self, *args, **kwargs):
         """
@@ -235,15 +236,15 @@ class MultiProcess(Iterator):
         self.parse(*args, **kwargs)
 
         # run
+        ret_list = [None] * self.total
         with multiprocessing.Pool(self.nprocs) as p:
-            ret_list = list(
-                tqdm.tqdm(
-                    p.imap(self, zip(self.dynamic_args, self.dynamic_kwargs)),
-                    total=self.total,
-                    desc=self.func.__name__,
-                    disable=self.disable_pbar,
-                )
-            )
+            for idx, result in tqdm.tqdm(
+                p.imap_unordered(self, zip(self.dynamic_args, self.dynamic_kwargs, range(self.total))),
+                total=self.total,
+                desc=self.func.__name__,
+                disable=self.disable_pbar,
+            ):
+                ret_list[idx] = result
         return ret_list
 
 
@@ -408,7 +409,8 @@ class BoundedMultiProcess(Iterator):
     def __call__(self, args):
         # Get process index
         global _proc_idx
-        return self.partial_func(*args[0], **args[1], **self.process_kwargs[_proc_idx])
+        idx = args[2]
+        return idx, self.partial_func(*args[0], **args[1], **self.process_kwargs[_proc_idx])
 
     def run(self, *args, **kwargs):
         """
@@ -421,15 +423,15 @@ class BoundedMultiProcess(Iterator):
 
         # run
         counter = multiprocessing.Value("i", 0)
+        ret_list = [None] * self.total
         with multiprocessing.Pool(self.nprocs, self.initializer, (counter,)) as p:
-            ret_list = list(
-                tqdm.tqdm(
-                    p.imap(self, zip(self.dynamic_args, self.dynamic_kwargs)),
-                    total=self.total,
-                    desc=self.func.__name__,
-                    disable=self.disable_pbar,
-                )
-            )
+            for idx, result in tqdm.tqdm(
+                p.imap_unordered(self, zip(self.dynamic_args, self.dynamic_kwargs, range(self.total))),
+                total=self.total,
+                desc=self.func.__name__,
+                disable=self.disable_pbar,
+            ):
+                ret_list[idx] = result
         return ret_list
 
 
@@ -518,23 +520,28 @@ class AsyncProcess(Iterator):
         self.concurrency = concurrency
 
     async def __call__(self, sem, args):
+        idx = args[2]
         if sem is None:
-            return await self.partial_func(*args[0], **args[1])
+            return idx, await self.partial_func(*args[0], **args[1])
         else:
             async with sem:
-                return await self.partial_func(*args[0], **args[1])
+                return idx, await self.partial_func(*args[0], **args[1])
 
     async def main(self):
         if self.concurrency > 0:
             sem = asyncio.Semaphore(self.concurrency)
         else:
             sem = None
-        tasks = [asyncio.create_task(self(sem, args)) for args in zip(self.dynamic_args, self.dynamic_kwargs)]
-        for f in tqdm.asyncio.tqdm.as_completed(
+        tasks = [
+            asyncio.create_task(self(sem, args))
+            for args in zip(self.dynamic_args, self.dynamic_kwargs, range(self.total))
+        ]
+        self.ret_list = [None] * self.total
+        for task in tqdm.asyncio.tqdm.as_completed(
             tasks, total=self.total, desc=self.func.__name__, disable=self.disable_pbar
         ):
-            await f
-        self.ret_list = [task.result() for task in tasks]
+            idx, result = await task
+            self.ret_list[idx] = result
 
     def run(self, *args, **kwargs):
         """
@@ -588,16 +595,15 @@ class AsyncMultiProcess(Iterator):
         self.concurrency = concurrency
         self.nprocs = nprocs
 
-    def __call__(self, args):
-        return self.partial_func(*args[0], **args[1])
+    async def __call__(self, args):
+        return await self.partial_func(*args[0], **args[1])
 
     async def main(self):
-        self.ret_list = []
         async with aiomultiprocess.Pool(self.nprocs, childconcurrency=self.concurrency) as p:
             it = p.map(self, zip(self.dynamic_args, self.dynamic_kwargs)).__aiter__()
             self.ret_list = [
-                a
-                async for a in tqdm.asyncio.tqdm(
+                result
+                async for result in tqdm.asyncio.tqdm(
                     it, total=self.total, desc=self.func.__name__, disable=self.disable_pbar
                 )
             ]
@@ -697,7 +703,8 @@ class MultiThread(Iterator):
         self.nworkers = nworkers if nworkers > 0 else 2
 
     def __call__(self, args):
-        return self.partial_func(*args[0], **args[1])
+        idx = args[2]
+        return idx, self.partial_func(*args[0], **args[1])
 
     def run(self, *args, **kwargs):
         """
@@ -709,11 +716,14 @@ class MultiThread(Iterator):
         self.parse(*args, **kwargs)
 
         # run
+        ret_list = [None] * self.total
         with ThreadPoolExecutor(max_workers=self.nworkers) as p:
-            tasks = [p.submit(self, args) for args in zip(self.dynamic_args, self.dynamic_kwargs)]
-            ret_list = []
-            for task in tqdm.tqdm(tasks, total=self.total, desc=self.func.__name__, disable=self.disable_pbar):
-                ret_list.append(task.result())
+            tasks = [p.submit(self, args) for args in zip(self.dynamic_args, self.dynamic_kwargs, range(self.total))]
+            for task in tqdm.tqdm(
+                as_completed(tasks), total=self.total, desc=self.func.__name__, disable=self.disable_pbar
+            ):
+                idx, result = task.result()
+                ret_list[idx] = result
 
         return ret_list
 
