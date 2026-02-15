@@ -117,10 +117,18 @@ class TestIterator(unittest.TestCase):
             self.a, self.b, self.t, opt="+"
         )
         self.assertEqual(ret_list, self.res)
+        ret_list = MultiProcess(self.process, nprocs=10, use_pool=False, disable_pbar=self.disable_pbar).run(
+            self.a, self.b, self.t, opt="+"
+        )
+        self.assertEqual(ret_list, self.res)
 
     def test_auto_multi_process(self):
         """test auto multi process"""
         ret_list = AutoMultiProcess(self.process, nprocs=10, disable_pbar=self.disable_pbar).run(
+            self.a, self.b, self.t, opt="+"
+        )
+        self.assertEqual(ret_list, self.res)
+        ret_list = AutoMultiProcess(self.process, nprocs=10, use_pool=False, disable_pbar=self.disable_pbar).run(
             self.a, self.b, self.t, opt="+"
         )
         self.assertEqual(ret_list, self.res)
@@ -134,6 +142,10 @@ class TestIterator(unittest.TestCase):
         ret_list = BoundedMultiProcess(self.bounded_process, nprocs=2, disable_pbar=self.disable_pbar).run(
             self.a, self.b, self.t, opt="+", port=[8000, 8001]
         )
+        self.assertEqual(ret_list, self.res)
+        ret_list = BoundedMultiProcess(
+            self.bounded_process, nprocs=2, use_pool=False, disable_pbar=self.disable_pbar
+        ).run(self.a, self.b, self.t, opt="+", port=[8000, 8001])
         self.assertEqual(ret_list, self.res)
 
         exception = None
@@ -151,6 +163,10 @@ class TestIterator(unittest.TestCase):
         ret_list = AutoBoundedMultiProcess(self.bounded_process, nprocs=2, disable_pbar=self.disable_pbar).run(
             self.a, self.b, self.t, opt="+", port=[8000, 8001]
         )
+        self.assertEqual(ret_list, self.res)
+        ret_list = AutoBoundedMultiProcess(
+            self.bounded_process, nprocs=2, use_pool=False, disable_pbar=self.disable_pbar
+        ).run(self.a, self.b, self.t, opt="+", port=[8000, 8001])
         self.assertEqual(ret_list, self.res)
         ret_list = AutoBoundedMultiProcess(self.bounded_process, nprocs=1, disable_pbar=self.disable_pbar).run(
             self.a, self.b, self.t, opt="+", port=8000

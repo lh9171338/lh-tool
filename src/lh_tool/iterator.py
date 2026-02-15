@@ -196,6 +196,8 @@ class MultiProcess(Iterator):
         func (callable): function to be iterated
         total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
         nprocs (int): number of processes, default is `multiprocessing.cpu_count()`
+        use_pool (bool): use `multiprocessing.Pool` or `multiprocessing.Process`, default is True
+        pbar_refresh_interval (float): interval of progress bar refreshing when `use_pool` is False, default is 1.0s
         **kwargs: inherited from `Iterator`
 
     Example:
@@ -205,7 +207,12 @@ class MultiProcess(Iterator):
 
         a = [1, 2]
         b = [3, 4]
+        # use `multiprocessing.Pool`
         res = MultiProcess(add).run(a, b)
+
+        # use `multiprocessing.Process`
+        res = MultiProcess(add, use_pool=False).run(a, b)
+
         print(res)
         # [4, 6]
         ```
@@ -216,15 +223,36 @@ class MultiProcess(Iterator):
         func: Callable,
         total: Optional[int] = None,
         nprocs: int = multiprocessing.cpu_count(),
+        use_pool: bool = True,
+        pbar_refresh_interval: float = 1.0,
         **kwargs,
     ):
         super().__init__(func=func, total=total, **kwargs)
 
         self.nprocs = nprocs if nprocs > 0 else multiprocessing.cpu_count()
+        self.use_pool = use_pool
+        self.pbar_refresh_interval = pbar_refresh_interval
 
-    def __call__(self, args):
+    def _func_pool(self, args):
+        """function when using `multiprocessing.Pool`"""
         idx = args[2]
         return idx, self.partial_func(*args[0], **args[1])
+
+    def _func(self, input_queue, output_queue, counter):
+        """function when using `multiprocessing.Process`"""
+        while True:
+            args = input_queue.get()
+            if args is None:
+                break
+
+            idx = args[2]
+            try:
+                result = self.partial_func(*args[0], **args[1])
+                output_queue.put((idx, result, None))
+            except Exception as e:
+                output_queue.put((idx, None, e))
+            with counter.get_lock():
+                counter.value += 1
 
     def run(self, *args, **kwargs):
         """
@@ -235,17 +263,70 @@ class MultiProcess(Iterator):
         # parse
         self.parse(*args, **kwargs)
 
-        # run
-        ret_list = [None] * self.total
-        with multiprocessing.Pool(self.nprocs) as p:
-            for idx, result in tqdm.tqdm(
-                p.imap_unordered(self, zip(self.dynamic_args, self.dynamic_kwargs, range(self.total))),
-                total=self.total,
-                desc=self.func.__name__,
-                disable=self.disable_pbar,
-            ):
-                ret_list[idx] = result
-        return ret_list
+        if self.use_pool:  # using `multiprocessing.Pool`
+            # run
+            ret_list = [None] * self.total
+            with multiprocessing.Pool(self.nprocs) as p:
+                for idx, result in tqdm.tqdm(
+                    p.imap_unordered(self._func_pool, zip(self.dynamic_args, self.dynamic_kwargs, range(self.total))),
+                    total=self.total,
+                    desc=self.func.__name__,
+                    disable=self.disable_pbar,
+                ):
+                    ret_list[idx] = result
+            return ret_list
+        else:  # using `multiprocessing.Process`
+            # initialize data queue
+            input_queue = multiprocessing.Queue()
+            output_queue = multiprocessing.Queue()
+            for args in zip(self.dynamic_args, self.dynamic_kwargs, range(self.total)):
+                input_queue.put(args)
+            for _ in range(self.nprocs):
+                input_queue.put(None)
+
+            # initialize counter
+            counter = multiprocessing.Value("i", 0)
+
+            # run
+            procs = []
+            for _ in range(self.nprocs):
+                p = multiprocessing.Process(target=self._func, args=(input_queue, output_queue, counter))
+                procs.append(p)
+                p.start()
+
+            # display progress bar
+            with tqdm.tqdm(total=self.total, desc=self.func.__name__, disable=self.disable_pbar) as pbar:
+
+                def _update_pbar():
+                    """update function"""
+                    last_val = 0
+                    while any(p.is_alive() for p in procs):
+                        val = counter.value
+                        delta = val - last_val
+                        if delta > 0:
+                            pbar.update(delta)
+                            last_val = val
+                        time.sleep(self.pbar_refresh_interval)
+                    delta = counter.value - last_val
+                    if delta > 0:
+                        pbar.update(delta)
+
+                t = threading.Thread(target=_update_pbar, daemon=True)
+                t.start()
+
+                # Get output
+                ret_list = [None] * self.total
+                for _ in range(self.total):
+                    idx, result, e = output_queue.get()
+                    if e is not None:
+                        raise e  # TODO: terminate all processes
+                    ret_list[idx] = result
+
+                for p in procs:
+                    p.join()
+                t.join()
+
+            return ret_list
 
 
 class AutoMultiProcess(AutoIterator):
@@ -258,6 +339,8 @@ class AutoMultiProcess(AutoIterator):
         func (callable): function to be iterated
         total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
         nprocs (int): number of processes, default is `multiprocessing.cpu_count()`
+        use_pool (bool): use `multiprocessing.Pool` or `multiprocessing.Process`, default is True
+        pbar_refresh_interval (float): interval of progress bar refreshing when `use_pool` is False, default is 1.0s
         **kwargs: inherited from `AutoIterator`
 
     Example:
@@ -284,6 +367,8 @@ class AutoMultiProcess(AutoIterator):
         func: Callable,
         total: Optional[int] = None,
         nprocs: int = multiprocessing.cpu_count(),
+        use_pool: bool = True,
+        pbar_refresh_interval: float = 1.0,
         **kwargs,
     ):
         iterator_cls = MultiProcess if nprocs > 1 else SingleProcess
@@ -292,6 +377,8 @@ class AutoMultiProcess(AutoIterator):
             func=func,
             total=total,
             nprocs=nprocs,
+            use_pool=use_pool,
+            pbar_refresh_interval=pbar_refresh_interval,
             **kwargs,
         )
 
@@ -309,6 +396,8 @@ class BoundedMultiProcess(Iterator):
         func (callable): function to be iterated
         total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
         nprocs (int): number of processes, default is `multiprocessing.cpu_count()`
+        use_pool (bool): use `multiprocessing.Pool` or `multiprocessing.Process`, default is True
+        pbar_refresh_interval (float): interval of progress bar refreshing when `use_pool` is False, default is 1.0s
         **kwargs: inherited from `Iterator`
 
     Example:
@@ -321,6 +410,10 @@ class BoundedMultiProcess(Iterator):
         b = [5, 6, 7, 8]
         # length of `port` must be equal to `nprocs`
         res = MultiProcess(add, nprocs=2).run(a, b, port=[8000, 8001])
+
+        # use `multiprocessing.Process`
+        res = MultiProcess(add, nprocs=2, use_pool=False).run(a, b, port=[8000, 8001])
+
         print(res)
         # [6, 8, 10, 12]
         ```
@@ -331,11 +424,15 @@ class BoundedMultiProcess(Iterator):
         func: Callable,
         total: Optional[int] = None,
         nprocs: int = multiprocessing.cpu_count(),
+        use_pool: bool = True,
+        pbar_refresh_interval: float = 1.0,
         **kwargs,
     ):
         super().__init__(func=func, total=total, **kwargs)
 
         self.nprocs = nprocs if nprocs > 0 else multiprocessing.cpu_count()
+        self.use_pool = use_pool
+        self.pbar_refresh_interval = pbar_refresh_interval
 
     def parse(self, *args, **kwargs):
         """parse"""
@@ -406,11 +503,28 @@ class BoundedMultiProcess(Iterator):
             _proc_idx = counter.value
             counter.value += 1
 
-    def __call__(self, args):
+    def _func_pool(self, args):
+        """function when using `multiprocessing.Pool`"""
         # Get process index
         global _proc_idx
         idx = args[2]
         return idx, self.partial_func(*args[0], **args[1], **self.process_kwargs[_proc_idx])
+
+    def _func(self, input_queue, output_queue, counter, proc_idx):
+        """function when using `multiprocessing.Process`"""
+        while True:
+            args = input_queue.get()
+            if args is None:
+                break
+
+            idx = args[2]
+            try:
+                result = self.partial_func(*args[0], **args[1], **self.process_kwargs[proc_idx])
+                output_queue.put((idx, result, None))
+            except Exception as e:
+                output_queue.put((idx, None, e))
+            with counter.get_lock():
+                counter.value += 1
 
     def run(self, *args, **kwargs):
         """
@@ -421,18 +535,71 @@ class BoundedMultiProcess(Iterator):
         # parse
         self.parse(*args, **kwargs)
 
-        # run
-        counter = multiprocessing.Value("i", 0)
-        ret_list = [None] * self.total
-        with multiprocessing.Pool(self.nprocs, self.initializer, (counter,)) as p:
-            for idx, result in tqdm.tqdm(
-                p.imap_unordered(self, zip(self.dynamic_args, self.dynamic_kwargs, range(self.total))),
-                total=self.total,
-                desc=self.func.__name__,
-                disable=self.disable_pbar,
-            ):
-                ret_list[idx] = result
-        return ret_list
+        if self.use_pool:  # using `multiprocessing.Pool`
+            # run
+            counter = multiprocessing.Value("i", 0)
+            ret_list = [None] * self.total
+            with multiprocessing.Pool(self.nprocs, self.initializer, (counter,)) as p:
+                for idx, result in tqdm.tqdm(
+                    p.imap_unordered(self._func_pool, zip(self.dynamic_args, self.dynamic_kwargs, range(self.total))),
+                    total=self.total,
+                    desc=self.func.__name__,
+                    disable=self.disable_pbar,
+                ):
+                    ret_list[idx] = result
+            return ret_list
+        else:  # using `multiprocessing.Process`
+            # initialize data queue
+            input_queue = multiprocessing.Queue()
+            output_queue = multiprocessing.Queue()
+            for args in zip(self.dynamic_args, self.dynamic_kwargs, range(self.total)):
+                input_queue.put(args)
+            for _ in range(self.nprocs):
+                input_queue.put(None)
+
+            # initialize counter
+            counter = multiprocessing.Value("i", 0)
+
+            # run
+            procs = []
+            for proc_idx in range(self.nprocs):
+                p = multiprocessing.Process(target=self._func, args=(input_queue, output_queue, counter, proc_idx))
+                procs.append(p)
+                p.start()
+
+            # display progress bar
+            with tqdm.tqdm(total=self.total, desc=self.func.__name__, disable=self.disable_pbar) as pbar:
+
+                def _update_pbar():
+                    """update function"""
+                    last_val = 0
+                    while any(p.is_alive() for p in procs):
+                        val = counter.value
+                        delta = val - last_val
+                        if delta > 0:
+                            pbar.update(delta)
+                            last_val = val
+                        time.sleep(self.pbar_refresh_interval)
+                    delta = counter.value - last_val
+                    if delta > 0:
+                        pbar.update(delta)
+
+                t = threading.Thread(target=_update_pbar, daemon=True)
+                t.start()
+
+                # Get output
+                ret_list = [None] * self.total
+                for _ in range(self.total):
+                    idx, result, e = output_queue.get()
+                    if e is not None:
+                        raise e  # TODO: terminate all processes
+                    ret_list[idx] = result
+
+                for p in procs:
+                    p.join()
+                t.join()
+
+            return ret_list
 
 
 class AutoBoundedMultiProcess(AutoIterator):
@@ -445,6 +612,8 @@ class AutoBoundedMultiProcess(AutoIterator):
         func (callable): function to be iterated
         total (int): number of iterations, if not specified, will infer from the list-type `args` and `kwargs` of `run` method
         nprocs (int): number of processes, default is `multiprocessing.cpu_count()`
+        use_pool (bool): use `multiprocessing.Pool` or `multiprocessing.Process`, default is True
+        pbar_refresh_interval (float): interval of progress bar refreshing when `use_pool` is False, default is 1.0s
         **kwargs: inherited from `AutoIterator`
 
     Example:
@@ -472,6 +641,8 @@ class AutoBoundedMultiProcess(AutoIterator):
         func: Callable,
         total: Optional[int] = None,
         nprocs: int = multiprocessing.cpu_count(),
+        use_pool: bool = True,
+        pbar_refresh_interval: float = 1.0,
         **kwargs,
     ):
         iterator_cls = BoundedMultiProcess if nprocs > 1 else SingleProcess
@@ -480,6 +651,8 @@ class AutoBoundedMultiProcess(AutoIterator):
             func=func,
             total=total,
             nprocs=nprocs,
+            use_pool=use_pool,
+            pbar_refresh_interval=pbar_refresh_interval,
             **kwargs,
         )
 
@@ -966,7 +1139,7 @@ class ParallelProcess(Iterator):
                 p.start()
 
             # display progress bar
-            with tqdm.tqdm(total=self.total, disable=self.disable_pbar) as pbar:
+            with tqdm.tqdm(total=self.total, desc=self.func.__name__, disable=self.disable_pbar) as pbar:
 
                 def _update_pbar():
                     """update function"""
