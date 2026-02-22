@@ -1019,6 +1019,7 @@ class ParallelProcess(Iterator):
         pbar_refresh_interval: float = 1.0,
         **kwargs,
     ):
+        self.func_name = func.__name__
         if is_single_task_func:
             func = SingleProcess(func).run
         super().__init__(func=func, total=total, **kwargs)
@@ -1139,7 +1140,7 @@ class ParallelProcess(Iterator):
                 p.start()
 
             # display progress bar
-            with tqdm.tqdm(total=self.total, desc=self.func.__name__, disable=self.disable_pbar) as pbar:
+            with tqdm.tqdm(total=self.total, desc=self.func_name, disable=self.disable_pbar) as pbar:
 
                 def _update_pbar():
                     """update function"""
